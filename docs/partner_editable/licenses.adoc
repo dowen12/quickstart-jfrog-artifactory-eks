@@ -27,7 +27,7 @@ features of this deployment:
 NOTE: If the license isn’t an Enterprise or Enterprise+ license, the license is invalid,
 or the license is not included, the deployment will fail. Also, ensure that the number
 of secondary Artifactory servers is at most the amount licensed minus one, for the
-primary server. If you specify too many servers, see the <<_faq_,FAQ section>> for instructions.
+primary server. If you specify too many servers, see the <<_faq,FAQ section>> for instructions.
 
 If you use a free trial, ensure that you convert to a permanent license before your trial ends,
 otherwise the nodes will become unresponsive. You can request a quote by contacting

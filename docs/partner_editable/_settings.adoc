@@ -1,4 +1,4 @@
-:quickstart-project-name: quickstart-jfrog-artifactory
+:quickstart-project-name: quickstart-jfrog-artifactory-eks
 :partner-product-name: Artifactory with Amazon EKS
 :partner-product-short-name: Artifactory
 :partner-company-name: JFrog, Ltd.
