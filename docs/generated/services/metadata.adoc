@@ -1,1 +1,5 @@
-// placeholder
+
+:template_aws_cloudformation_stack:
+:template_aws_ec2_securitygroupingress:
+:template_cloudformation:
+:template_ec2:
