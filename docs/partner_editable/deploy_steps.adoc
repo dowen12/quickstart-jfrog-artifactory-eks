@@ -65,7 +65,7 @@ NOTE: You are responsible for the cost of the AWS services used while running th
 [cols=2*]
 |===
 ^|https://fwd.aws/X3Y3P[Deploy {partner-product-name} into a new VPC on AWS^]
-^|hhttps://fwd.aws/KJQa3[View template^]
+^|https://fwd.aws/KJQa3[View template^]
 
 ^|https://fwd.aws/95pby[Deploy {partner-product-name} into an existing VPC on AWS^]
 ^|https://fwd.aws/qn8EX[View template^]
