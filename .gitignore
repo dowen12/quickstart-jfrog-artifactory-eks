@@ -1,0 +1,6 @@
+taskcat_outputs/
+awsqs_*
+awsqs-*
+lambda.zip
+.DS_Store
+.taskcat/
