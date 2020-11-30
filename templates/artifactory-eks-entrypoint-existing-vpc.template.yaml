@@ -643,6 +643,7 @@ Resources:
         NumberOfNodes: !Ref NumofSecondaryNodes
         NodeGroupName: !Sub "${ArtifactoryProduct}-secondary"
         NodeVolumeSize: !Ref NodeVolumeSize
+        Labels: !Sub "partition=${ArtifactoryProduct}-secondary"
         # CustomAmiId: !Ref CustomAmiId
         EKSClusterName: !GetAtt EKSStack.Outputs.EKSClusterName
 
