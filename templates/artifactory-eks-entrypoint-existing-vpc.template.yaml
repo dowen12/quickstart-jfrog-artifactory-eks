@@ -58,9 +58,10 @@ Metadata:
           - DatabaseAllocatedStorage
           - MultiAzDatabase
       - Label:
-          default: EC2/EKS configuration
+          default: EKS configuration
         Parameters:
           - KubernetesVersion
+          # - ConfigSetName
           - NodeInstanceType
           - NumofSecondaryNodes
           - NodeVolumeSize
@@ -163,6 +164,8 @@ Metadata:
         default: Number of secondary nodes
       KubernetesVersion:
         default: Kubernetes version
+      # ConfigSetName:
+      #   default: Config set name
       QSS3BucketName:
         default: Quick Start S3 bucket name
       QSS3KeyPrefix:
@@ -316,9 +319,16 @@ Parameters:
     Type: Number
   KubernetesVersion:
     Description: Kubernetes control plane version.
-    AllowedValues: ["1.14", "1.15", "1.16"]
-    Default: "1.16"
+    AllowedValues: ["1.15", "1.16", "1.17", "1.18"]
+    Default: "1.18"
     Type: String
+  # ConfigSetName:
+  #   Type: String
+  #   Default: ""
+  #   Description: >-
+  #     (Optional) Name used to map advanced parameters to an EKS cluster. If you launched an advanced
+  #     configuration stack and would like to apply it's values to this cluster, this name must match the "Config set name"
+  #     parameter in that stack. If left blank, a new config set is created using default values.
   ProvisionBastionHost:
     Description: Choose Disabled to skip creating a bastion instance. Due to the Artifactory nodes being
       created in private subnets, the default setting of Enabled this is highly recommended.
@@ -595,9 +605,28 @@ Conditions:
   BastionSecurityGroup: !And [!Equals [!Ref ArtifactoryProduct, 'JFrog-Artifactory-Pro'], !Equals [!Ref 'ProvisionBastionHost', 'Enabled']]
   DefaultSize: !Equals [!Ref DefaultDeploymentSize, "true"]
   UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'aws-quickstart']
+  # CreateAdvancedConfigWithDefaults: !Equals [!Ref ConfigSetName, '']
 Resources:
+  JFrogEKSAdvancedConfigStack:
+    Type: AWS::CloudFormation::Stack
+    # Condition: CreateAdvancedConfigWithDefaults
+    Metadata: { cfn-lint: { config: { ignore_checks: [E9902, W9901] } } }
+    Properties:
+      TemplateURL: !Sub
+        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}submodules/quickstart-amazon-eks/templates/amazon-eks-advanced-configuration.template.yaml'
+        - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+          S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
+      Parameters:
+        ConfigSetName: !Ref AWS::StackName
+        ConsulUIAccessCIDR: !Ref RemoteAccessCidr
+        VaultUIAccessCIDR: !Ref RemoteAccessCidr
+        # NodeVolumeSize: !Ref 'AWS::NoValue'
+        KubernetesVersion: !Ref KubernetesVersion
+        Labels: !Sub "partition=${ArtifactoryProduct}"
   EKSStack:
     Type: AWS::CloudFormation::Stack
+    DependsOn:
+      - JFrogEKSAdvancedConfigStack
     Properties:
       TemplateURL: !Sub
         - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}submodules/quickstart-amazon-eks/templates/amazon-eks-entrypoint-existing-vpc.template.yaml
@@ -613,7 +642,7 @@ Resources:
         PublicSubnet3ID: !Ref PublicSubnet3Id
         RemoteAccessCIDR: !Ref RemoteAccessCidr
         KeyPairName: !Ref KeyPairName
-        ConfigSetName: ''
+        ConfigSetName: !Ref AWS::StackName
         PerAccountSharedResources: !Ref PerAccountSharedResources
         PerRegionSharedResources: !Ref PerRegionSharedResources
         ProvisionBastionHost: !Ref ProvisionBastionHost
