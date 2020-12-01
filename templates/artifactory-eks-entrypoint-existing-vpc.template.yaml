@@ -783,9 +783,9 @@ Resources:
               - !Ref 'AWS::Region'
               - !Ref 'QSS3BucketRegion'
 Outputs:
-  # ArtifactoryUrl:
-  #   Value: !GetAtt ArtifactoryCoreStack.Outputs.ArtifactoryUrl
-  #   Description: Public Artifactory URL
+  ArtifactoryUrl:
+    Value: !GetAtt ArtifactoryCoreStack.Outputs.ArtifactoryUrl
+    Description: Public Artifactory URL
   BastionIp:
     Value: !GetAtt EKSStack.Outputs.BastionIP
     Description: Bastion host IP, for admin access via SSH
