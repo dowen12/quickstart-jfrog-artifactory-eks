@@ -212,8 +212,14 @@ Resources:
           art.lic: !Sub
             >-
             ${ArtifactoryLicense1}
+
+
             ${ArtifactoryLicense2}
+
+
             ${ArtifactoryLicense3}
+
+
             ${ArtifactoryLicense4}
   SecureStoreDatabase:
     DependsOn: NameSpace
