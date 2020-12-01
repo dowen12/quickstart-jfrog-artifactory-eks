@@ -61,7 +61,6 @@ Metadata:
           default: EKS configuration
         Parameters:
           - KubernetesVersion
-          # - ConfigSetName
           - NodeInstanceType
           - NumofSecondaryNodes
           - NodeVolumeSize
@@ -164,8 +163,6 @@ Metadata:
         default: Number of secondary nodes
       KubernetesVersion:
         default: Kubernetes version
-      # ConfigSetName:
-      #   default: Config set name
       QSS3BucketName:
         default: Quick Start S3 bucket name
       QSS3KeyPrefix:
@@ -322,13 +319,6 @@ Parameters:
     AllowedValues: ["1.15", "1.16", "1.17", "1.18"]
     Default: "1.18"
     Type: String
-  # ConfigSetName:
-  #   Type: String
-  #   Default: ""
-  #   Description: >-
-  #     (Optional) Name used to map advanced parameters to an EKS cluster. If you launched an advanced
-  #     configuration stack and would like to apply it's values to this cluster, this name must match the "Config set name"
-  #     parameter in that stack. If left blank, a new config set is created using default values.
   ProvisionBastionHost:
     Description: Choose Disabled to skip creating a bastion instance. Due to the Artifactory nodes being
       created in private subnets, the default setting of Enabled this is highly recommended.
