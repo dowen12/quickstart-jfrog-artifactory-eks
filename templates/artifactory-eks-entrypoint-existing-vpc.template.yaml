@@ -32,7 +32,7 @@ Metadata:
         Parameters:
           - ProvisionBastionHost
           - BastionInstanceType
-          - BastionOs
+          - BastionOS
           - BastionRootVolumeSize
           - BastionEnableTcpForwarding
           - BastionEnableX11Forwarding
@@ -66,7 +66,6 @@ Metadata:
           - NodeVolumeSize
           - PerAccountSharedResources
           - PerRegionSharedResources
-          - EKSPublicAccessEndpoint
           - LambdaZipsBucketName
       - Label:
           default: AWS Quick Start configuration
@@ -113,8 +112,6 @@ Metadata:
         default: Per-account shared resources
       PerRegionSharedResources:
         default: Per-Region shared resources
-      EKSPublicAccessEndpoint:
-        default: EKS public access endpoint
       BastionInstanceType:
         default: Bastion instance type
       BastionRootVolumeSize:
@@ -123,7 +120,7 @@ Metadata:
         default: Bastion enable TCP forwarding
       BastionEnableX11Forwarding:
         default: Bastion enable X11 forwarding
-      BastionOs:
+      BastionOS:
         default: Bastion operating system
       ArtifactoryProduct:
         default: Artifactory product to install
@@ -337,27 +334,16 @@ Parameters:
     AllowedValues: ['Yes', 'No']
     Default: 'Yes'
     Description: Choose "No" if you already deployed another EKS Quick Start stack in your Region.
-  EKSPublicAccessEndpoint:
-    Type: String
-    AllowedValues: [Enabled, Disabled]
-    Default: Disabled
-    Description: Configure access to the Kubernetes API server endpoint from outside of your VPC.
   BastionInstanceType:
     Description: Size of the bastion instances.
     AllowedValues:
-      - t2.nano
-      - t2.micro
-      - t2.small
-      - t2.medium
-      - t2.large
-      - m3.large
-      - m3.xlarge
-      - m3.2xlarge
-      - m4.large
-      - m4.xlarge
-      - m4.2xlarge
-      - m4.4xlarge
-    Default: "t2.micro"
+      - t3.micro
+      - t3.small
+      - t3.medium
+      - t3.large
+      - m5.large
+      - m5.xlarge
+    Default: "t3.micro"
     Type: String
   BastionRootVolumeSize:
     Description: Size of the root volume on the bastion instances.
@@ -381,15 +367,11 @@ Parameters:
       - "false"
     Default: "false"
     Type: String
-  BastionOs:
-    Description: Linux distribution for the Amazon Machine Image (AMI) to be used for the bastion instances.
-    AllowedValues:
-      - "Amazon-Linux2-HVM"
-      - "CentOS-7-HVM"
-      - "Ubuntu-Server-20.04-LTS-HVM"
-      - "SUSE-SLES-15-HVM"
-    Default: "Amazon-Linux2-HVM"
+  BastionOS:
     Type: String
+    AllowedValues: [ "Amazon-Linux2-HVM", "Amazon-Linux-HVM", "CentOS-7-HVM", "Ubuntu-Server-14.04-LTS-HVM", "Ubuntu-Server-16.04-LTS-HVM", "SUSE-SLES-15-HVM" ]
+    Default: "Amazon-Linux2-HVM"
+    Description: Linux distribution of the bastion host.
   NumberOfSecondary:
     Description: Number of secondary Artifactory pods to complete your HA deployment.
       Minimum number of 2 to fit the Artifactory best practices. Do not select more than
@@ -418,7 +400,7 @@ Parameters:
       https://www.jfrog.com/confluence/display/RTF/Release+Notes
     AllowedPattern: ^(([0-9]|[1-9][0-9])\.){2}([1-9][0-9]|[0-9])$
     ConstraintDescription: A version that matches X.X.X per Artifactory releases.
-    Default: 7.2.1
+    Default: 7.11.2
     Type: String
   ReleaseStage:
     Description: Whether to use the upstream repository that is pre-GA.
@@ -595,11 +577,9 @@ Conditions:
   BastionSecurityGroup: !And [!Equals [!Ref ArtifactoryProduct, 'JFrog-Artifactory-Pro'], !Equals [!Ref 'ProvisionBastionHost', 'Enabled']]
   DefaultSize: !Equals [!Ref DefaultDeploymentSize, "true"]
   UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'aws-quickstart']
-  # CreateAdvancedConfigWithDefaults: !Equals [!Ref ConfigSetName, '']
 Resources:
   JFrogEKSAdvancedConfigStack:
     Type: AWS::CloudFormation::Stack
-    # Condition: CreateAdvancedConfigWithDefaults
     Metadata: { cfn-lint: { config: { ignore_checks: [E9902, W9901] } } }
     Properties:
       TemplateURL: !Sub
@@ -610,10 +590,15 @@ Resources:
         ConfigSetName: !Ref AWS::StackName
         ConsulUIAccessCIDR: !Ref RemoteAccessCidr
         VaultUIAccessCIDR: !Ref RemoteAccessCidr
-        # NodeVolumeSize: !Ref 'AWS::NoValue'
+        NodeVolumeSize: !Ref NodeVolumeSize
         KubernetesVersion: !Ref KubernetesVersion
         NodeGroupName: !Ref ArtifactoryProduct
         Labels: !Sub "partition=${ArtifactoryProduct}"
+        BastionInstanceType: !Ref BastionInstanceType
+        BastionOS: !Ref BastionOS
+        BastionEnableX11Forwarding: !Ref BastionEnableX11Forwarding
+        BastionRootVolumeSize: !Ref BastionRootVolumeSize
+        BastionEnableTCPForwarding: !Ref BastionEnableTcpForwarding
   EKSStack:
     Type: AWS::CloudFormation::Stack
     DependsOn:
@@ -637,11 +622,11 @@ Resources:
         PerAccountSharedResources: !Ref PerAccountSharedResources
         PerRegionSharedResources: !Ref PerRegionSharedResources
         ProvisionBastionHost: !Ref ProvisionBastionHost
-        # EKSPublicAccessEndpoint: 
         AdditionalEKSAdminUserArn: !Join [",", !Ref AdditionalEKSAdminUserArn]
         AdditionalEKSAdminRoleArn: !Join [",", !Ref AdditionalEKSAdminRoleArn]
         NodeInstanceType: !Ref NodeInstanceType
         NumberOfNodes: !If [ArtifactoryHa, '1', !Ref NumberOfSecondary]
+        MaxNumberOfNodes: !If [ArtifactoryHa, '1', !Ref NumberOfSecondary]
         QSS3BucketName: !Ref QSS3BucketName
         QSS3KeyPrefix: !Sub "${QSS3KeyPrefix}submodules/quickstart-amazon-eks/"
         QSS3BucketRegion: !Ref QSS3BucketRegion
@@ -661,10 +646,10 @@ Resources:
         Subnet3ID: !Ref PrivateSubnet3Id
         NodeInstanceType: !Ref NodeInstanceType
         NumberOfNodes: !Ref NumofSecondaryNodes
+        MaxNumberOfNodes: !Ref NumofSecondaryNodes
         NodeGroupName: !Sub "${ArtifactoryProduct}-secondary"
         NodeVolumeSize: !Ref NodeVolumeSize
         Labels: !Sub "partition=${ArtifactoryProduct}-secondary"
-        # CustomAmiId: !Ref CustomAmiId
         EKSClusterName: !GetAtt EKSStack.Outputs.EKSClusterName
 
   # Allow the bastion host to SSH into the secondary node pools
