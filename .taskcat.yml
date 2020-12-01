@@ -38,13 +38,13 @@ tests:
       SmLicenseCertName: "override"
       MultiAzDatabase: "false"
       PerAccountSharedResources: "No"
-      PerRegionSharedResources: "Yes"
+      PerRegionSharedResources: "No"
       EKSPublicAccessEndpoint: "Disabled"
     template: templates/artifactory-eks-entrypoint-new-vpc.template.yaml
     regions:
       - us-west-2
-      # - us-east-2
-      # - us-east-1
+      - us-east-2
+      - us-east-1
       - eu-west-1
       - eu-central-1
       - eu-west-2
