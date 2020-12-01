@@ -622,6 +622,7 @@ Resources:
         VaultUIAccessCIDR: !Ref RemoteAccessCidr
         # NodeVolumeSize: !Ref 'AWS::NoValue'
         KubernetesVersion: !Ref KubernetesVersion
+        NodeGroupName: !Ref ArtifactoryProduct
         Labels: !Sub "partition=${ArtifactoryProduct}"
   EKSStack:
     Type: AWS::CloudFormation::Stack
