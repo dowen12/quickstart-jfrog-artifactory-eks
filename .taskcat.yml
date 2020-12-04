@@ -6,19 +6,19 @@ project:
   s3_object_acl: public-read
   s3_regional_buckets: True
   regions:
+    - us-west-2
     - us-east-1
     - us-east-2
-    - us-west-1
-    - us-west-2
     - eu-west-1
     - eu-west-2
     - eu-west-3
     - eu-north-1
-    - eu-south-1 # No EKS
+    - eu-central-1
+    - ap-southeast-1
     - ap-southeast-2
-    - ca-central-1 # No EKS
-    - sa-east-1
-    - af-south-1
+    - ap-northeast-1
+    - ap-northeast-2
+    - ap-south-1
 tests:
   jfrog-eks:
     parameters:
@@ -37,14 +37,21 @@ tests:
       MasterKey: "override"
       SmLicenseCertName: "override"
       MultiAzDatabase: "false"
-      PerAccountSharedResources: "No"
-      PerRegionSharedResources: "No"
+      # PerAccountSharedResources: "No"
+      # PerRegionSharedResources: "Yes"
       EKSPublicAccessEndpoint: "Disabled"
     template: templates/artifactory-eks-entrypoint-new-vpc.template.yaml
     regions:
       - us-west-2
-      - us-east-2
       - us-east-1
+      - us-east-2
       - eu-west-1
-      - eu-central-1
       - eu-west-2
+      - eu-west-3
+      # - eu-north-1
+      - eu-central-1
+      # - ap-southeast-1
+      # - ap-southeast-2
+      # - ap-northeast-1
+      # - ap-northeast-2
+      # - ap-south-1
