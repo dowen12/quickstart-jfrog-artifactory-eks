@@ -37,16 +37,19 @@ tests:
       MasterKey: "override"
       SmLicenseCertName: "override"
       MultiAzDatabase: "false"
-      # PerAccountSharedResources: "No"
-      # PerRegionSharedResources: "No"
+      PerAccountSharedResources: "No"
+      PerRegionSharedResources: "No"
       EKSPublicAccessEndpoint: "Disabled"
+      InstallXray: "true"
+      XrayDatabasePassword: "$[taskcat_genpass_8A]"
+      RabbitMQPassword: "$[taskcat_genpass_8A]"
     template: templates/artifactory-eks-entrypoint-new-vpc.template.yaml
     regions:
       # - us-west-2
-      - us-east-1
+      # - us-east-1
       # - us-east-2
       # - eu-west-1
-      # - eu-west-2
+      - eu-west-2
       # - eu-west-3
       # - eu-north-1
       # - eu-central-1

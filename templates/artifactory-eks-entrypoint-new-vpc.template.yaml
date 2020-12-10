@@ -69,6 +69,16 @@ Metadata:
           - QSS3BucketName
           - QSS3KeyPrefix
           - QSS3BucketRegion
+      - Label:
+          default: JFrog Xray Configuration
+        Parameters:
+          - InstallXray
+          - XrayHelmChartVersion
+          - XrayReplicaCount
+          - RabbitMQReplicaCount
+          - XrayDatabaseUser
+          - XrayDatabasePassword
+          - RabbitMQPassword
     ParameterLabels:
       KeyPairName:
         default: SSH key name
@@ -541,6 +551,64 @@ Parameters:
     Default: 'us-east-1'
     Description: AWS Region where the Quick Start S3 bucket (QSS3BucketName) is hosted. When using your own bucket, you must specify this value.
     Type: String
+  InstallXray:
+    Description: Choose true to install JFrog Xray instance(s).
+    ConstraintDescription: True or False
+    AllowedValues:
+      - "true"
+      - "false"
+    Default: "false"
+    Type: String
+  XrayHelmChartVersion:
+    Description: The version of Xray Helm chart that you want to deploy into the Quick Start.
+    AllowedPattern: ^(([0-9]|[1-9][0-9])\.){2}([1-9][0-9]|[0-9])$
+    ConstraintDescription: A version that matches X.X.X per Xray releases.
+    Default: 3.3.0
+    Type: String
+  XrayReplicaCount:
+    Description: The number of Xray pods to complete your
+      HA deployment. The minimum number is one; the maximum is seven.
+      For high availability of Xray, set the replica count to be equal or higher than 2. Recommended is 3.
+    MinValue: 1
+    MaxValue: 7
+    Default: 3
+    Type: Number
+  RabbitMQReplicaCount:
+    Description: The number of RabbitMQ pods to complete your
+      HA deployment. The minimum number is one; the maximum is seven.
+      For high availability of Xray, set the replica count to be equal or higher than 2. Recommended is 3.
+    MinValue: 1
+    MaxValue: 7
+    Default: 3
+    Type: Number
+  XrayDatabaseUser:
+    Description: The login ID for the Xray database user.
+    MinLength: '1'
+    MaxLength: '16'
+    AllowedPattern: ^[a-zA-Z]([a-zA-Z0-9])+$
+    ConstraintDescription: 1 to 16 alphanumeric characters. First character must be a letter.
+    Default: xray
+    Type: String
+  XrayDatabasePassword:
+    Description: The password for the Xray database user.
+    AllowedPattern: ^[^ \\']+$
+    MinLength: '8'
+    MaxLength: '12'
+    ConstraintDescription: Must be at least 8 and no more than
+      12 characters containing letters and (minimum 1 capital letter), numbers and
+      symbols.
+    NoEcho: 'true'
+    Type: String
+  RabbitMQPassword:
+    Description: The password for the Xray RabbitMQ.
+    AllowedPattern: ^[^ \\']+$
+    MinLength: '8'
+    MaxLength: '12'
+    ConstraintDescription: Must be at least 8 and no more than
+      12 characters containing letters and (minimum 1 capital letter), numbers and
+      symbols.
+    NoEcho: 'true'
+    Type: String
 Rules:
   EKSSupport:
     Assertions:
@@ -638,6 +706,13 @@ Resources:
         QSS3BucketName: !Ref QSS3BucketName
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
         QSS3BucketRegion: !Ref QSS3BucketRegion
+        InstallXray: !Ref InstallXray
+        XrayHelmChartVersion: !Ref XrayHelmChartVersion
+        XrayReplicaCount: !Ref XrayReplicaCount
+        RabbitMQReplicaCount: !Ref RabbitMQReplicaCount
+        XrayDatabaseUser: !Ref XrayDatabaseUser
+        XrayDatabasePassword: !Ref XrayDatabasePassword
+        RabbitMQPassword: !Ref RabbitMQPassword
 Outputs:
   ArtifactoryUrl:
     Value: !GetAtt ArtifactoryEksExistingVpcStack.Outputs.ArtifactoryUrl
