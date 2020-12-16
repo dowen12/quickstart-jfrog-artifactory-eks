@@ -37,8 +37,8 @@ tests:
       MasterKey: "override"
       SmLicenseCertName: "override"
       MultiAzDatabase: "false"
-      # PerAccountSharedResources: "No"
-      # PerRegionSharedResources: "No"
+      PerAccountSharedResources: "No"
+      PerRegionSharedResources: "No"
       EKSPublicAccessEndpoint: "Disabled"
     template: templates/artifactory-eks-entrypoint-new-vpc.template.yaml
     regions:
