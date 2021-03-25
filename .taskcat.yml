@@ -35,15 +35,15 @@ tests:
       NumberOfSecondary: "2"
       ArtifactoryServerName: "artifactory"
       MasterKey: "override"
-      SmLicenseCertName: "jfrog-artifactory-721"
+      SmLicenseCertName: "jfrog-artifactory-feb21"
       MultiAzDatabase: "false"
-      PerAccountSharedResources: "No"
-      PerRegionSharedResources: "No"
+      PerAccountSharedResources: "AutoDetect"
+      PerRegionSharedResources: "AutoDetect"
       EKSPublicAccessEndpoint: "Disabled"
     template: templates/artifactory-eks-entrypoint-new-vpc.template.yaml
     regions:
-      # - us-west-2
-      - us-east-1
+      - us-west-2
+      # - us-east-1
       # - us-east-2
       # - eu-west-1
       # - eu-west-2
