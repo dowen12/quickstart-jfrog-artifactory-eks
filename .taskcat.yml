@@ -32,6 +32,7 @@ tests:
       QSS3BucketRegion: "$[taskcat_current_region]"
       DatabaseInstance: "db.m5.large"
       # ArtifactoryVersion: "7.11.2"
+      HelmChartVersion: '4.9.4'
       NumberOfSecondary: "2"
       ArtifactoryServerName: "artifactory"
       MasterKey: "override"
