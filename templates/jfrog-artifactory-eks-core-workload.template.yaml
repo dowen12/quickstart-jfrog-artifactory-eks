@@ -1,6 +1,18 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: "Deploys Artifactory into an existing Kubernetes cluster (qs-1qpmn20mc)"
 Parameters:
+  # KubeManifestLambdaArn:
+  #   Type: String
+  # HelmLambdaArn:
+  #   Type: String
+  # EksClusterName:
+  #   Type: String
+  # KubeConfigPath:
+  #   Type: String
+  # KubeConfigKmsContext:
+  #   Type: String
+  # KubeGetLambdaArn:
+  #   Type: String
   NumberOfSecondary:
     Type: Number
   AccessCidr:
@@ -155,6 +167,8 @@ Resources:
     Type: "Custom::KubeManifest"
     Version: '1.0'
     Properties:
+      # ServiceToken: !Ref KubeManifestLambdaArn
+      # ClusterName: !Ref EksClusterName
       ServiceToken: !Sub "arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:EKS-QuickStart-KubeManifest-${KubeClusterName}"
       ClusterName: !Ref KubeClusterName
       Manifest:
@@ -170,6 +184,8 @@ Resources:
     Type: "Custom::KubeManifest"
     Version: '1.0'
     Properties:
+      # ServiceToken: !Ref KubeManifestLambdaArn
+      # ClusterName: !Ref EksClusterName
       ServiceToken: !Sub "arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:EKS-QuickStart-KubeManifest-${KubeClusterName}"
       ClusterName: !Ref KubeClusterName
       Manifest:
@@ -196,6 +212,8 @@ Resources:
     Type: "Custom::KubeManifest"
     Version: '1.0'
     Properties:
+      # ServiceToken: !Ref KubeManifestLambdaArn
+      # ClusterName: !Ref EksClusterName
       ServiceToken: !Sub "arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:EKS-QuickStart-KubeManifest-${KubeClusterName}"
       ClusterName: !Ref KubeClusterName
       Manifest:
@@ -226,6 +244,8 @@ Resources:
     Type: "Custom::KubeManifest"
     Version: '1.0'
     Properties:
+      # ServiceToken: !Ref KubeManifestLambdaArn
+      # ClusterName: !Ref EksClusterName
       ServiceToken: !Sub "arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:EKS-QuickStart-KubeManifest-${KubeClusterName}"
       ClusterName: !Ref KubeClusterName
       Manifest:
@@ -250,16 +270,20 @@ Resources:
               !Sub ${DatabaseUrl}
   ArtifactoryDeployment:
     Condition: ArtifactoryHa
+    # Type: "Custom::Helm"
     Type: "AWSQS::Kubernetes::Helm"
     DependsOn:
       - LicenseStore
       - CertificateStore
     # Version: '1.0'
     Properties:
+      # ServiceToken: !Ref HelmLambdaArn
+      # ClusterName: !Ref EksClusterName
       ClusterID: !Ref KubeClusterName
       Namespace: !FindInMap [ArtifactoryProductMap, !Ref ArtifactoryProduct, namespace]
       Name: quickstart-artifactory-ha
       Chart: jfrog/artifactory-ha
+      # RepoUrl: !FindInMap [HelmRepoMap, !FindInMap [ArtifactoryProductMap, !Ref ArtifactoryProduct, !Ref ReleaseStage], RepoUrl]
       Repository: !FindInMap [HelmRepoMap, !FindInMap [ArtifactoryProductMap, !Ref ArtifactoryProduct, !Ref ReleaseStage], RepoUrl]
       # If we want to test specific version of the Helm chart, we can pass it here
       Version: !FindInMap [HelmRepoMap, !FindInMap [ArtifactoryProductMap, !Ref ArtifactoryProduct, !Ref ReleaseStage], HelmChartVersion]
@@ -276,7 +300,7 @@ Resources:
               secret: artifactory-cluster-license
               dataKey: art.lic
             masterKey: ${MasterKey}
-            preStartCommand: mkdir -p /var/opt/jfrog/artifactory/etc/artifactory/info/; wget ${QsS3Uri}submodules/quickstart-jfrog-artifactory/scripts/roles/artifactory/files/${info_file} -O /var/opt/jfrog/artifactory/etc/artifactory/info/installer-info.json; mkdir -p /var/opt/jfrog/artifactory/bootstrap/artifactory/tomcat/lib/; wget -O  /var/opt/jfrog/artifactory/bootstrap/artifactory/tomcat/lib/${DatabasePlugin} ${DatabasePluginUrl}
+            preStartCommand: mkdir -p /var/opt/jfrog/artifactory/etc/artifactory/info/; wget ${QsS3Uri}scripts/roles/artifactory/files/${info_file} -O /var/opt/jfrog/artifactory/etc/artifactory/info/installer-info.json; mkdir -p /var/opt/jfrog/artifactory/bootstrap/artifactory/tomcat/lib/; wget -O  /var/opt/jfrog/artifactory/bootstrap/artifactory/tomcat/lib/${DatabasePlugin} ${DatabasePluginUrl}
             persistence:
               enabled: false
               local: false
@@ -410,6 +434,8 @@ Resources:
     Type: "Custom::KubeGet"
     Version: '1.0'
     Properties:
+      # ServiceToken: !Ref KubeGetLambdaArn
+      # ClusterName: !Ref EksClusterName
       ServiceToken: !Sub "arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:EKS-QuickStart-KubeGet-${KubeClusterName}"
       ClusterName: !Ref KubeClusterName
       Namespace: !FindInMap [ArtifactoryProductMap, !Ref ArtifactoryProduct, namespace]
@@ -417,13 +443,18 @@ Resources:
       JsonPath: '{.status.loadBalancer.ingress[0].hostname}'
   JcrDeployment:
     Condition: JcrInstall
+    # Type: "Custom::Helm"
     Type: "AWSQS::Kubernetes::Helm"
     DependsOn: CertificateStore
+    # Version: '1.0'
     Properties:
+      # ServiceToken: !Ref HelmLambdaArn
+      # ClusterName: !Ref EksClusterName
       ClusterID: !Ref KubeClusterName
       Namespace: !FindInMap [ArtifactoryProductMap, !Ref ArtifactoryProduct, namespace]
       Name: quickstart-jcr
       Chart: jfrog/artifactory-jcr
+      # RepoUrl: !FindInMap [HelmRepoMap, !FindInMap [ArtifactoryProductMap, !Ref ArtifactoryProduct, !Ref ReleaseStage], RepoUrl]
       Repository: !FindInMap [HelmRepoMap, !FindInMap [ArtifactoryProductMap, !Ref ArtifactoryProduct, !Ref ReleaseStage], RepoUrl]
       Version: !FindInMap [HelmRepoMap, !FindInMap [ArtifactoryProductMap, !Ref ArtifactoryProduct, !Ref ReleaseStage], HelmChartVersion]
       ValueYaml: !Sub
@@ -437,7 +468,7 @@ Resources:
                 pullPolicy: Always
               deleteDBPropertiesOnStartup: true
               masterKey: ${MasterKey}
-              preStartCommand: mkdir -p /var/opt/jfrog/artifactory/etc/artifactory/info/; wget ${QsS3Uri}submodules/quickstart-jfrog-artifactory/scripts/roles/artifactory/files/${info_file} -O /var/opt/jfrog/artifactory/etc/artifactory/info/installer-info.json; mkdir -p /var/opt/jfrog/artifactory/bootstrap/artifactory/tomcat/lib/; wget -O  /var/opt/jfrog/artifactory/bootstrap/artifactory/tomcat/lib/${DatabasePlugin} ${DatabasePluginUrl}; cp /bootstrap/artifactory/binarystore.xml /var/opt/jfrog/artifactory/etc/artifactory/binarystore.xml
+              preStartCommand: mkdir -p /var/opt/jfrog/artifactory/etc/artifactory/info/; wget ${QsS3Uri}scripts/roles/artifactory/files/${info_file} -O /var/opt/jfrog/artifactory/etc/artifactory/info/installer-info.json; mkdir -p /var/opt/jfrog/artifactory/bootstrap/artifactory/tomcat/lib/; wget -O  /var/opt/jfrog/artifactory/bootstrap/artifactory/tomcat/lib/${DatabasePlugin} ${DatabasePluginUrl}; cp /bootstrap/artifactory/binarystore.xml /var/opt/jfrog/artifactory/etc/artifactory/binarystore.xml
               persistence:
                 enabled: false
                 type: aws-s3-v3
@@ -524,6 +555,8 @@ Resources:
     Type: "Custom::KubeGet"
     Version: '1.0'
     Properties:
+      # ServiceToken: !Ref KubeGetLambdaArn
+      # ClusterName: !Ref EksClusterName
       ServiceToken: !Sub "arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:EKS-QuickStart-KubeGet-${KubeClusterName}"
       ClusterName: !Ref KubeClusterName
       Namespace: !FindInMap [ArtifactoryProductMap, !Ref ArtifactoryProduct, namespace]

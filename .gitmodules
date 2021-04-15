@@ -2,13 +2,13 @@
 	path = docs/boilerplate
 	url = https://github.com/aws-quickstart/quickstart-documentation-base-common.git
 	branch = main
-[submodule "submodules/quickstart-amazon-eks"]
-	path = submodules/quickstart-amazon-eks
-	url = https://github.com/aws-quickstart/quickstart-amazon-eks.git
-	branch = main
 [submodule "submodules/quickstart-aws-vpc"]
 	path = submodules/quickstart-aws-vpc
 	url = https://github.com/aws-quickstart/quickstart-aws-vpc.git
 [submodule "submodules/quickstart-jfrog-artifactory"]
 	path = submodules/quickstart-jfrog-artifactory
 	url = https://github.com/aws-quickstart/quickstart-jfrog-artifactory.git
+[submodule "submodules/quickstart-amazon-eks"]
+	path = submodules/quickstart-amazon-eks
+	url = https://github.com/aws-quickstart/quickstart-amazon-eks.git
+	branch = master
