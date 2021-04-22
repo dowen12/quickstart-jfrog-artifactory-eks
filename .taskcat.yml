@@ -1,0 +1,57 @@
+project:
+  name: quickstart-jfrog-artifactory-eks
+  owner: quickstart-eng@amazon.com
+  lambda_source_path: functions/source
+  lambda_zip_path: functions/packages
+  s3_object_acl: public-read
+  s3_regional_buckets: True
+  regions:
+    - us-west-2
+    - us-east-1
+    - us-east-2
+    - eu-west-1
+    - eu-west-2
+    - eu-west-3
+    - eu-north-1
+    - eu-central-1
+    - ap-southeast-1
+    - ap-southeast-2
+    - ap-northeast-1
+    - ap-northeast-2
+    - ap-south-1
+tests:
+  jfrog-eks:
+    parameters:
+      KeyPairName: "$[taskcat_getkeypair]"
+      RemoteAccessCidr: "0.0.0.0/0"
+      AccessCidr: "0.0.0.0/0"
+      AvailabilityZones: "$[taskcat_genaz_3]"
+      DatabasePassword: "$[taskcat_genpass_8A]"
+      QSS3BucketName: "$[taskcat_autobucket]"
+      QSS3KeyPrefix: "quickstart-jfrog-artifactory-eks/"
+      QSS3BucketRegion: "$[taskcat_current_region]"
+      DatabaseInstance: "db.m5.large"
+      ArtifactoryVersion: "7.11.2"
+      NumberOfSecondary: "2"
+      ArtifactoryServerName: "artifactory"
+      MasterKey: "override"
+      SmLicenseCertName: "override"
+      MultiAzDatabase: "false"
+      PerAccountSharedResources: "No"
+      PerRegionSharedResources: "No"
+      EKSPublicAccessEndpoint: "Disabled"
+    template: templates/artifactory-eks-entrypoint-new-vpc.template.yaml
+    regions:
+      # - us-west-2
+      - us-east-1
+      # - us-east-2
+      # - eu-west-1
+      # - eu-west-2
+      # - eu-west-3
+      # - eu-north-1
+      # - eu-central-1
+      # - ap-southeast-1
+      # - ap-southeast-2
+      # - ap-northeast-1
+      # - ap-northeast-2
+      # - ap-south-1
