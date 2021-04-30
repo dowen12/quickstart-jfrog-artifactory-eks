@@ -1,8 +1,8 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: Deploys an EKS cluster with JFrog Artifactory into an existing VPC (qs-1q037efm3).
 Metadata:
-  # QuickStartDocumentation:
-  #   EntrypointName: "Launch into an existing VPC"
+  QuickStartDocumentation:
+    EntrypointName: "Launch into an existing VPC"
   AWS::CloudFormation::Interface:
     ParameterGroups:
       - Label:
@@ -32,7 +32,7 @@ Metadata:
         Parameters:
           - ProvisionBastionHost
           - BastionInstanceType
-          - BastionOs
+          - BastionOS
           - BastionRootVolumeSize
           - BastionEnableTcpForwarding
           - BastionEnableX11Forwarding
@@ -40,7 +40,7 @@ Metadata:
           default: JFrog Artifactory configuration
         Parameters:
           - ArtifactoryProduct
-          - ArtifactoryVersion
+          - HelmChartVersion
           - ReleaseStage
           - DefaultDeploymentSize
           - ArtifactoryDeploymentSize
@@ -58,19 +58,21 @@ Metadata:
           - DatabaseAllocatedStorage
           - MultiAzDatabase
       - Label:
-          default: EC2/EKS configuration
+          default: EKS configuration
         Parameters:
           - KubernetesVersion
           - NodeInstanceType
           - NumofSecondaryNodes
           - NodeVolumeSize
+          - PerAccountSharedResources
+          - PerRegionSharedResources
           - LambdaZipsBucketName
       - Label:
           default: AWS Quick Start configuration
         Parameters:
-          - QsS3BucketName
-          - QsS3KeyPrefix
-          - QsS3BucketRegion
+          - QSS3BucketName
+          - QSS3KeyPrefix
+          - QSS3BucketRegion
     ParameterLabels:
       KeyPairName:
         default: SSH key name
@@ -106,6 +108,10 @@ Metadata:
         default: Private subnet 3 CIDR
       ProvisionBastionHost:
         default: Bastion instance
+      PerAccountSharedResources:
+        default: Per-account shared resources
+      PerRegionSharedResources:
+        default: Per-Region shared resources
       BastionInstanceType:
         default: Bastion instance type
       BastionRootVolumeSize:
@@ -114,12 +120,12 @@ Metadata:
         default: Bastion enable TCP forwarding
       BastionEnableX11Forwarding:
         default: Bastion enable X11 forwarding
-      BastionOs:
+      BastionOS:
         default: Bastion operating system
       ArtifactoryProduct:
         default: Artifactory product to install
-      ArtifactoryVersion:
-        default: Artifactory version
+      HelmChartVersion:
+        default: Artifactory Helm chart version
       ReleaseStage:
         default: Release stage of the product to deploy
       DefaultDeploymentSize:
@@ -154,11 +160,11 @@ Metadata:
         default: Number of secondary nodes
       KubernetesVersion:
         default: Kubernetes version
-      QsS3BucketName:
+      QSS3BucketName:
         default: Quick Start S3 bucket name
-      QsS3KeyPrefix:
+      QSS3KeyPrefix:
         default: Quick Start S3 key prefix
-      QsS3BucketRegion:
+      QSS3BucketRegion:
         default: Quick Start S3 bucket Region
       LambdaZipsBucketName:
         default: Lambda zips bucket name
@@ -307,8 +313,8 @@ Parameters:
     Type: Number
   KubernetesVersion:
     Description: Kubernetes control plane version.
-    AllowedValues: ["1.14", "1.15", "1.16"]
-    Default: "1.16"
+    AllowedValues: ["1.15", "1.16", "1.17", "1.18"]
+    Default: "1.18"
     Type: String
   ProvisionBastionHost:
     Description: Choose Disabled to skip creating a bastion instance. Due to the Artifactory nodes being
@@ -318,22 +324,26 @@ Parameters:
       - "Disabled"
     Default: "Enabled"
     Type: String
+  PerAccountSharedResources:
+    Type: String
+    AllowedValues: ['AutoDetect', 'Yes', 'No']
+    Default: 'Yes'
+    Description: Choose "No" if you already deployed another EKS Quick Start stack in your AWS account.
+  PerRegionSharedResources:
+    Type: String
+    AllowedValues: ['AutoDetect', 'Yes', 'No']
+    Default: 'Yes'
+    Description: Choose "No" if you already deployed another EKS Quick Start stack in your Region.
   BastionInstanceType:
     Description: Size of the bastion instances.
     AllowedValues:
-      - t2.nano
-      - t2.micro
-      - t2.small
-      - t2.medium
-      - t2.large
-      - m3.large
-      - m3.xlarge
-      - m3.2xlarge
-      - m4.large
-      - m4.xlarge
-      - m4.2xlarge
-      - m4.4xlarge
-    Default: "t2.micro"
+      - t3.micro
+      - t3.small
+      - t3.medium
+      - t3.large
+      - m5.large
+      - m5.xlarge
+    Default: "t3.micro"
     Type: String
   BastionRootVolumeSize:
     Description: Size of the root volume on the bastion instances.
@@ -357,15 +367,11 @@ Parameters:
       - "false"
     Default: "false"
     Type: String
-  BastionOs:
-    Description: Linux distribution for the Amazon Machine Image (AMI) to be used for the bastion instances.
-    AllowedValues:
-      - "Amazon-Linux2-HVM"
-      - "CentOS-7-HVM"
-      - "Ubuntu-Server-20.04-LTS-HVM"
-      - "SUSE-SLES-15-HVM"
-    Default: "Amazon-Linux2-HVM"
+  BastionOS:
     Type: String
+    AllowedValues: [ "Amazon-Linux2-HVM", "Amazon-Linux-HVM", "CentOS-7-HVM", "Ubuntu-Server-14.04-LTS-HVM", "Ubuntu-Server-16.04-LTS-HVM", "SUSE-SLES-15-HVM" ]
+    Default: "Amazon-Linux2-HVM"
+    Description: Linux distribution of the bastion host.
   NumberOfSecondary:
     Description: Number of secondary Artifactory pods to complete your HA deployment.
       Minimum number of 2 to fit the Artifactory best practices. Do not select more than
@@ -388,13 +394,13 @@ Parameters:
       - JFrog-Container-Registry
     Default: JFrog-Artifactory-Pro
     Type: String
-  ArtifactoryVersion:
+  HelmChartVersion:
     Description: Version of Artifactory that you want to deploy into the Quick Start.
       Please see the release notes to select the version you want to deploy.
       https://www.jfrog.com/confluence/display/RTF/Release+Notes
     AllowedPattern: ^(([0-9]|[1-9][0-9])\.){2}([1-9][0-9]|[0-9])$
-    ConstraintDescription: A version that matches X.X.X per Artifactory releases.
-    Default: 7.2.1
+    ConstraintDescription: A Helm chart version that matches X.X.X per Artifactory releases.
+    Default: '4.9.4'
     Type: String
   ReleaseStage:
     Description: Whether to use the upstream repository that is pre-GA.
@@ -515,7 +521,7 @@ Parameters:
       - "false"
     Default: "true"
     Type: String
-  QsS3BucketName:
+  QSS3BucketName:
     AllowedPattern: ^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$
     ConstraintDescription:
       Quick Start bucket name can include numbers, lowercase
@@ -527,18 +533,18 @@ Parameters:
       numbers, lowercase letters, uppercase letters, and hyphens (-). It cannot start
       or end with a hyphen (-).
     Type: String
-  QsS3KeyPrefix:
+  QSS3KeyPrefix:
     AllowedPattern: ^[0-9a-zA-Z-/]*$
     ConstraintDescription:
       Quick Start key prefix can include numbers, lowercase letters,
       uppercase letters, hyphens (-), and forward slash (/).
-    Default: quickstart-jfrog-artifactory/
+    Default: quickstart-jfrog-artifactory-eks/
     Description:
       S3 key prefix for the Quick Start assets. Quick Start key prefix
       can include numbers, lowercase letters, uppercase letters, hyphens (-), and
       forward slash (/).
     Type: String
-  QsS3BucketRegion:
+  QSS3BucketRegion:
     Default: 'us-east-1'
     Description: AWS Region where the Quick Start S3 bucket (QSS3BucketName) is hosted. When using your own bucket, you must specify this value.
     Type: String
@@ -570,20 +576,39 @@ Conditions:
   ArtifactoryHa: !Equals [!Ref ArtifactoryProduct, 'JFrog-Artifactory-Pro']
   BastionSecurityGroup: !And [!Equals [!Ref ArtifactoryProduct, 'JFrog-Artifactory-Pro'], !Equals [!Ref 'ProvisionBastionHost', 'Enabled']]
   DefaultSize: !Equals [!Ref DefaultDeploymentSize, "true"]
-  UsingDefaultBucket: !Equals [!Ref QsS3BucketName, 'aws-quickstart']
+  UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'aws-quickstart']
 Resources:
-  EksStack:
+  JFrogEKSAdvancedConfigStack:
     Type: AWS::CloudFormation::Stack
+    Metadata: { cfn-lint: { config: { ignore_checks: [E9902, W9901] } } }
     Properties:
       TemplateURL: !Sub
-        - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QsS3KeyPrefix}submodules/quickstart-amazon-eks/templates/amazon-eks.template.yaml
-        - S3Bucket: !If [UsingDefaultBucket, !Sub '${QsS3BucketName}-${AWS::Region}', !Ref 'QsS3BucketName']
-          S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref 'QsS3BucketRegion']
+        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}submodules/quickstart-amazon-eks/templates/amazon-eks-advanced-configuration.template.yaml'
+        - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+          S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
       Parameters:
-        KeyPairName: !Ref KeyPairName
-        RemoteAccessCIDR: !Ref RemoteAccessCidr
-        AdditionalEKSAdminUserArn: !Join [",", !Ref AdditionalEKSAdminUserArn]
-        AdditionalEKSAdminRoleArn: !Join [",", !Ref AdditionalEKSAdminRoleArn]
+        ConfigSetName: !Ref AWS::StackName
+        ConsulUIAccessCIDR: !Ref RemoteAccessCidr
+        VaultUIAccessCIDR: !Ref RemoteAccessCidr
+        NodeVolumeSize: !Ref NodeVolumeSize
+        KubernetesVersion: !Ref KubernetesVersion
+        NodeGroupName: !Ref ArtifactoryProduct
+        Labels: !Sub "partition=${ArtifactoryProduct}"
+        BastionInstanceType: !Ref BastionInstanceType
+        BastionOS: !Ref BastionOS
+        BastionEnableX11Forwarding: !Ref BastionEnableX11Forwarding
+        BastionRootVolumeSize: !Ref BastionRootVolumeSize
+        BastionEnableTCPForwarding: !Ref BastionEnableTcpForwarding
+  EKSStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn:
+      - JFrogEKSAdvancedConfigStack
+    Properties:
+      TemplateURL: !Sub
+        - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}submodules/quickstart-amazon-eks/templates/amazon-eks-entrypoint-existing-vpc.template.yaml
+        - S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref 'QSS3BucketName']
+          S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref 'QSS3BucketRegion']
+      Parameters:
         VPCID: !Ref VpcId
         PrivateSubnet1ID: !Ref PrivateSubnet1Id
         PrivateSubnet2ID: !Ref PrivateSubnet2Id
@@ -591,54 +616,41 @@ Resources:
         PublicSubnet1ID: !Ref PublicSubnet1Id
         PublicSubnet2ID: !Ref PublicSubnet2Id
         PublicSubnet3ID: !Ref PublicSubnet3Id
-        KubernetesVersion: !Ref KubernetesVersion
+        RemoteAccessCIDR: !Ref RemoteAccessCidr
+        KeyPairName: !Ref KeyPairName
+        ConfigSetName: !Ref AWS::StackName
+        PerAccountSharedResources: !Ref PerAccountSharedResources
+        PerRegionSharedResources: !Ref PerRegionSharedResources
+        ProvisionBastionHost: !Ref ProvisionBastionHost
+        AdditionalEKSAdminUserArn: !Join [",", !Ref AdditionalEKSAdminUserArn]
+        AdditionalEKSAdminRoleArn: !Join [",", !Ref AdditionalEKSAdminRoleArn]
         NodeInstanceType: !Ref NodeInstanceType
         NumberOfNodes: !If [ArtifactoryHa, '1', !Ref NumberOfSecondary]
-        NodeGroupName: !Sub ${ArtifactoryProduct}
-        NodeVolumeSize: !Ref NodeVolumeSize
-        BootstrapArguments: !Sub "--kubelet-extra-args '--node-labels=partition=${ArtifactoryProduct}'"
-        ProvisionBastionHost: !Ref ProvisionBastionHost
-        BastionInstanceType: !Ref BastionInstanceType
-        BastionOS: !Ref BastionOs
-        BastionRootVolumeSize: !Ref BastionRootVolumeSize
-        BastionEnableTCPForwarding: !Ref BastionEnableTcpForwarding
-        BastionEnableX11Forwarding: !Ref BastionEnableX11Forwarding
-        QSS3BucketName: !Ref QsS3BucketName
-        QSS3KeyPrefix: !Sub "${QsS3KeyPrefix}submodules/quickstart-amazon-eks/"
-        QSS3BucketRegion: !Ref QsS3BucketRegion
-        LambdaZipsBucketName: !Ref LambdaZipsBucketName
-
+        MaxNumberOfNodes: !If [ArtifactoryHa, '1', !Ref NumberOfSecondary]
+        QSS3BucketName: !Ref QSS3BucketName
+        QSS3KeyPrefix: !Sub "${QSS3KeyPrefix}submodules/quickstart-amazon-eks/"
+        QSS3BucketRegion: !Ref QSS3BucketRegion
   
   ArtifactorySecondaryNodesStack:
     Condition: ArtifactoryHa
     Type: "AWS::CloudFormation::Stack"
     Properties:
       TemplateURL: !Sub
-        - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QsS3KeyPrefix}submodules/quickstart-amazon-eks/templates/amazon-eks-nodegroup.template.yaml
-        - S3Bucket: !If [UsingDefaultBucket, !Sub '${QsS3BucketName}-${AWS::Region}', !Ref 'QsS3BucketName']
-          S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref 'QsS3BucketRegion']
+        - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}submodules/quickstart-amazon-eks/submodules/quickstart-amazon-eks-nodegroup/templates/amazon-eks-nodegroup.template.yaml
+        - S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref 'QSS3BucketName']
+          S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref 'QSS3BucketRegion']
       Parameters:
-        KeyPairName: !Ref KeyPairName
-        PrivateSubnet1ID: !Ref PrivateSubnet1Id
-        PrivateSubnet2ID: !Ref PrivateSubnet2Id
-        PrivateSubnet3ID: !Ref PrivateSubnet3Id
-        VPCID: !Ref VpcId
+        KeyPairName: !Ref 'KeyPairName'
+        Subnet1ID: !Ref PrivateSubnet1Id
+        Subnet2ID: !Ref PrivateSubnet2Id
+        Subnet3ID: !Ref PrivateSubnet3Id
         NodeInstanceType: !Ref NodeInstanceType
         NumberOfNodes: !Ref NumofSecondaryNodes
+        MaxNumberOfNodes: !Ref NumofSecondaryNodes
         NodeGroupName: !Sub "${ArtifactoryProduct}-secondary"
         NodeVolumeSize: !Ref NodeVolumeSize
-        EKSControlPlane: !GetAtt EksStack.Outputs.EKSClusterName
-        ControlPlaneSecurityGroup: !GetAtt EksStack.Outputs.ControlPlaneSecurityGroup
-        NodeInstanceProfile: !GetAtt EksStack.Outputs.NodeInstanceProfile
-        NodeInstanceRoleName: !GetAtt EksStack.Outputs.NodeInstanceRoleName
-        NodeInstanceRoleArn: !GetAtt EksStack.Outputs.NodeInstanceRoleArn
-        KubernetesVersion: !Ref KubernetesVersion
-        BootstrapArguments: !Sub "--kubelet-extra-args '--node-labels=partition=${ArtifactoryProduct}-secondary'"
-        QSS3BucketName: !Ref QsS3BucketName
-        QSS3KeyPrefix: !Sub "${QsS3KeyPrefix}submodules/quickstart-amazon-eks/"
-        QSS3BucketRegion: !Ref QsS3BucketRegion
-        CleanupSecurityGroupDependenciesLambdaArn: !GetAtt EksStack.Outputs.CleanupSecurityGroupDependenciesLambdaArn
-        NodeSGFunctionArn: !GetAtt EksStack.Outputs.NodeSGFunctionArn
+        Labels: !Sub "partition=${ArtifactoryProduct}-secondary"
+        EKSClusterName: !GetAtt EKSStack.Outputs.EKSClusterName
 
   # Allow the bastion host to SSH into the secondary node pools
   BastionToRegularIngress:
@@ -647,7 +659,7 @@ Resources:
     Properties:
       Description: Allow SSH from Bastion server to Regular Nodes
       GroupId: !GetAtt ArtifactorySecondaryNodesStack.Outputs.EKSNodeSecurityGroup
-      SourceSecurityGroupId: !GetAtt EksStack.Outputs.BastionSecurityGroup
+      SourceSecurityGroupId: !GetAtt EKSStack.Outputs.BastionSecurityGroup
       IpProtocol: tcp
       ToPort: 22
       FromPort: 22
@@ -658,7 +670,7 @@ Resources:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       Description: Allows regular nodes to communicate with master nodes
-      GroupId: !GetAtt EksStack.Outputs.NodeGroupSecurityGroup
+      GroupId: !GetAtt EKSStack.Outputs.NodeGroupSecurityGroup
       SourceSecurityGroupId: !GetAtt ArtifactorySecondaryNodesStack.Outputs.EKSNodeSecurityGroup
       IpProtocol: '-1'
       FromPort: 0
@@ -670,19 +682,19 @@ Resources:
     Properties:
       Description: Allows master nodes to communicate with regular agent nodes
       GroupId: !GetAtt ArtifactorySecondaryNodesStack.Outputs.EKSNodeSecurityGroup
-      SourceSecurityGroupId: !GetAtt EksStack.Outputs.NodeGroupSecurityGroup
+      SourceSecurityGroupId: !GetAtt EKSStack.Outputs.NodeGroupSecurityGroup
       IpProtocol: '-1'
       FromPort: 0
       ToPort: 65535
 
   ArtifactoryCoreInfraStack:
-    DependsOn: EksStack
+    DependsOn: EKSStack
     Type: AWS::CloudFormation::Stack
     Properties:
       TemplateURL: !Sub
-        - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QsS3KeyPrefix}templates/jfrog-artifactory-core-infrastructure.template.yaml
-        - S3Bucket: !If [UsingDefaultBucket, !Sub '${QsS3BucketName}-${AWS::Region}', !Ref 'QsS3BucketName']
-          S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref 'QsS3BucketRegion']
+        - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/jfrog-artifactory-core-infrastructure.template.yaml
+        - S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref 'QSS3BucketName']
+          S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref 'QSS3BucketRegion']
       Parameters:
         VpcId: !Ref VpcId
         VpcCidr: !Ref VpcCidr
@@ -705,9 +717,9 @@ Resources:
     Type: AWS::CloudFormation::Stack
     Properties:
       TemplateURL: !Sub
-        - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QsS3KeyPrefix}templates/jfrog-artifactory-eks-core-workload.template.yaml
-        - S3Bucket: !If [UsingDefaultBucket, !Sub '${QsS3BucketName}-${AWS::Region}', !Ref 'QsS3BucketName']
-          S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref 'QsS3BucketRegion']
+        - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/artifactory-eks-core-workload.template.yaml
+        - S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref 'QSS3BucketName']
+          S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref 'QSS3BucketRegion']
       Parameters:
         NumberOfSecondary: !Ref NumberOfSecondary
         AccessCidr: !Ref AccessCidr
@@ -731,24 +743,24 @@ Resources:
         DatabaseType: !GetAtt ArtifactoryCoreInfraStack.Outputs.DatabaseType
         DatabaseUrl: !GetAtt ArtifactoryCoreInfraStack.Outputs.DatabaseUrl
         MasterKey: !Ref MasterKey
-        ArtifactoryVersion: !Ref ArtifactoryVersion
+        HelmChartVersion: !Ref HelmChartVersion
         ArtifactoryDeploymentSize: !If [DefaultSize, !GetAtt ArtifactoryCoreInfraStack.Outputs.DeploymentSize, !Ref ArtifactoryDeploymentSize]
         ReleaseStage: !Ref ReleaseStage
-        KubeClusterName: !GetAtt EksStack.Outputs.EKSClusterName
+        KubeClusterName: !GetAtt EKSStack.Outputs.EKSClusterName
         QsS3Uri: !Sub
-          - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QsS3KeyPrefix}
+          - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}
           - S3Bucket: !If
               - UsingDefaultBucket
               - !Sub 'aws-quickstart-${AWS::Region}'
-              - !Ref 'QsS3BucketName'
+              - !Ref 'QSS3BucketName'
             S3Region: !If
               - UsingDefaultBucket
               - !Ref 'AWS::Region'
-              - !Ref 'QsS3BucketRegion'
+              - !Ref 'QSS3BucketRegion'
 Outputs:
   ArtifactoryUrl:
     Value: !GetAtt ArtifactoryCoreStack.Outputs.ArtifactoryUrl
     Description: Public Artifactory URL
   BastionIp:
-    Value: !GetAtt EksStack.Outputs.BastionIP
+    Value: !GetAtt EKSStack.Outputs.BastionIP
     Description: Bastion host IP, for admin access via SSH
