@@ -1,6 +1,14 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: Deploys an EKS cluster with JFrog Artifactory into an existing VPC (qs-1q037efm3).
 Metadata:
+  cfn-lint:
+    config:
+      ignore_checks:
+        - E9101
+        - E0002
+        - W9006
+      ignore_reasons:
+        - E9101: "'master' is part of the product naming conventions for now"
   # QuickStartDocumentation:
   #   EntrypointName: "Launch into an existing VPC"
   AWS::CloudFormation::Interface:
@@ -547,25 +555,6 @@ Parameters:
       files should be placed. If you leave this parameter blank, an S3 bucket will be created.'
     Default: ''
     Type: String
-# Rules:
-#   EKSSupport:
-#     Assertions:
-#       - AssertDescription: Your AWS Region does *NOT* yet support Amazon EKS
-#         Assert: !Contains
-#           -  - us-west-2
-#              - us-east-1
-#              - us-east-2
-#              - eu-west-1
-#              - eu-west-2
-#              - eu-west-3
-#              - eu-north-1
-#              - eu-central-1
-#              - ap-southeast-1
-#              - ap-southeast-2
-#              - ap-northeast-1
-#              - ap-northeast-2
-#              - ap-south-1
-#           - !Ref 'AWS::Region'
 Conditions:
   ArtifactoryHa: !Equals [!Ref ArtifactoryProduct, 'JFrog-Artifactory-Pro']
   BastionSecurityGroup: !And [!Equals [!Ref ArtifactoryProduct, 'JFrog-Artifactory-Pro'], !Equals [!Ref 'ProvisionBastionHost', 'Enabled']]
