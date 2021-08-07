@@ -1,6 +1,13 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: 'JFrog Artifactory EKS Quick Start Deployment into a new VPC (qs-1qpmn20kg)'
 Metadata:
+  cfn-lint:
+    config:
+      ignore_checks:
+        - E9101
+        - W9006
+      ignore_reasons:
+        - E9101: "'master' is part of the product naming conventions for now"
   QuickStartDocumentation:
     EntrypointName: "Launch into a new VPC"
   AWS::CloudFormation::Interface:

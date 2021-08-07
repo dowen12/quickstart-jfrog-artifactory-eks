@@ -1,6 +1,13 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: Deploys an EKS cluster with JFrog Artifactory into an existing VPC (qs-1q037efm3).
 Metadata:
+  cfn-lint:
+    config:
+      ignore_checks:
+        - E9101
+        - W9006
+      ignore_reasons:
+        - E9101: "'master' is part of the product naming conventions for now"
   QuickStartDocumentation:
     EntrypointName: "Launch into an existing VPC"
   AWS::CloudFormation::Interface:
@@ -66,7 +73,7 @@ Metadata:
           - NodeVolumeSize
           - PerAccountSharedResources
           - PerRegionSharedResources
-          - LambdaZipsBucketName
+          # - LambdaZipsBucketName
       - Label:
           default: AWS Quick Start configuration
         Parameters:
@@ -166,8 +173,8 @@ Metadata:
         default: Quick Start S3 key prefix
       QSS3BucketRegion:
         default: Quick Start S3 bucket Region
-      LambdaZipsBucketName:
-        default: Lambda zips bucket name
+      # LambdaZipsBucketName:
+      #   default: Lambda zips bucket name
 Parameters:
   KeyPairName:
     Description: Name of an existing key pair, which allows you
@@ -548,30 +555,11 @@ Parameters:
     Default: 'us-east-1'
     Description: AWS Region where the Quick Start S3 bucket (QSS3BucketName) is hosted. When using your own bucket, you must specify this value.
     Type: String
-  LambdaZipsBucketName:
-    Description: '[OPTIONAL] The name of the S3 bucket where the Lambda .zip
-      files should be placed. If you leave this parameter blank, an S3 bucket will be created.'
-    Default: ''
-    Type: String
-# Rules:
-#   EKSSupport:
-#     Assertions:
-#       - AssertDescription: Your AWS Region does *NOT* yet support Amazon EKS
-#         Assert: !Contains
-#           -  - us-west-2
-#              - us-east-1
-#              - us-east-2
-#              - eu-west-1
-#              - eu-west-2
-#              - eu-west-3
-#              - eu-north-1
-#              - eu-central-1
-#              - ap-southeast-1
-#              - ap-southeast-2
-#              - ap-northeast-1
-#              - ap-northeast-2
-#              - ap-south-1
-#           - !Ref 'AWS::Region'
+  # LambdaZipsBucketName:
+  #   Description: '[OPTIONAL] The name of the S3 bucket where the Lambda .zip
+  #     files should be placed. If you leave this parameter blank, an S3 bucket will be created.'
+  #   Default: ''
+  #   Type: String
 Conditions:
   ArtifactoryHa: !Equals [!Ref ArtifactoryProduct, 'JFrog-Artifactory-Pro']
   BastionSecurityGroup: !And [!Equals [!Ref ArtifactoryProduct, 'JFrog-Artifactory-Pro'], !Equals [!Ref 'ProvisionBastionHost', 'Enabled']]
@@ -733,8 +721,8 @@ Resources:
         ArtifactoryIamAcessKey: !GetAtt ArtifactoryCoreInfraStack.Outputs.ArtifactoryIamAcessKey
         SecretAccessKey: !GetAtt ArtifactoryCoreInfraStack.Outputs.SecretAccessKey
         ArtifactoryS3Bucket: !GetAtt ArtifactoryCoreInfraStack.Outputs.S3Bucket
-        ProDockerRepo: !GetAtt ArtifactoryCoreInfraStack.Outputs.ProDockerRepo
-        NginxDockerRepo: !GetAtt ArtifactoryCoreInfraStack.Outputs.NginxDockerRepo
+        # ProDockerRepo: !GetAtt ArtifactoryCoreInfraStack.Outputs.ProDockerRepo
+        # NginxDockerRepo: !GetAtt ArtifactoryCoreInfraStack.Outputs.NginxDockerRepo
         DatabaseUser: !Ref DatabaseUser
         DatabasePassword: !Ref DatabasePassword
         DatabaseDriver: !GetAtt ArtifactoryCoreInfraStack.Outputs.DatabaseDriver
@@ -747,16 +735,16 @@ Resources:
         ArtifactoryDeploymentSize: !If [DefaultSize, !GetAtt ArtifactoryCoreInfraStack.Outputs.DeploymentSize, !Ref ArtifactoryDeploymentSize]
         ReleaseStage: !Ref ReleaseStage
         KubeClusterName: !GetAtt EKSStack.Outputs.EKSClusterName
-        QsS3Uri: !Sub
-          - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}
-          - S3Bucket: !If
-              - UsingDefaultBucket
-              - !Sub 'aws-quickstart-${AWS::Region}'
-              - !Ref 'QSS3BucketName'
-            S3Region: !If
-              - UsingDefaultBucket
-              - !Ref 'AWS::Region'
-              - !Ref 'QSS3BucketRegion'
+        # QsS3Uri: !Sub
+        #   - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}
+        #   - S3Bucket: !If
+        #       - UsingDefaultBucket
+        #       - !Sub 'aws-quickstart-${AWS::Region}'
+        #       - !Ref 'QSS3BucketName'
+        #     S3Region: !If
+        #       - UsingDefaultBucket
+        #       - !Ref 'AWS::Region'
+        #       - !Ref 'QSS3BucketRegion'
 Outputs:
   ArtifactoryUrl:
     Value: !GetAtt ArtifactoryCoreStack.Outputs.ArtifactoryUrl
