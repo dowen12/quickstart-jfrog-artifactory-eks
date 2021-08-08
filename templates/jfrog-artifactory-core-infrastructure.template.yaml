@@ -38,8 +38,6 @@ Parameters:
     Type: Number
   MultiAzDatabase:
     Type: String
-  DatabaseEngine:
-    Type: String
   DatabaseUser:
     Type: String
   DatabasePassword:
@@ -49,48 +47,11 @@ Parameters:
     Type: String
   DatabaseName:
     Type: String
-  ArtifactoryProduct:
-    Default: JFrog-Artifactory-Pro
-    Type: String
-  ReleaseStage:
-    Default: GA
-    Type: String
   InstanceType:
     Default: m4.xlarge
     Type: String
 
 Mappings:
-  DatabaseMap:
-    Postgres:
-      Name: postgresql
-      DatabaseVersion: 11.5
-      Driver: "org.postgresql.Driver"
-      Plugin: postgresql-42.2.9.jar
-      PluginURL: https://jdbc.postgresql.org/download/
-      port: "5432"
-      extraDatabaseOps: ""
-    MySQL:
-      Name: mysql
-      DatabaseVersion: 5.7
-      Driver: "com.mysql.jdbc.Driver"
-      Plugin: mysql-connector-java-8.0.19.jar
-      PluginURL: https://bintray.com/artifact/download/bintray/jcenter/mysql/mysql-connector-java/8.0.19/
-      port: "3306"
-      extraDatabaseOps: "?characterEncoding=UTF-8&elideSetAutoCommits=true"
-  ReleaseStageMap:
-    BETA:
-      ProDockerRepo: "earlyaccess-docker.jfrog.io/jfrog/artifactory-pro"
-      JcrDockerRepo: "earlyaccess-docker.jfrog.io/jfrog/artifactory-jcr"
-      NginxDockerRepo: "earlyaccess-docker.jfrog.io/jfrog/nginx-artifactory-pro"
-    GA:
-      ProDockerRepo: "docker.bintray.io/jfrog/artifactory-pro"
-      JcrDockerRepo: "docker.bintray.io/jfrog/artifactory-jcr"
-      NginxDockerRepo: "docker.bintray.io/jfrog/nginx-artifactory-pro"
-  ProductMap:
-    JFrog-Container-Registry:
-      RepoName: JcrDockerRepo
-    JFrog-Artifactory-Pro:
-      RepoName: ProDockerRepo
   JavaOptionstoInstance:
     m4.large:
       Min: 4
@@ -255,11 +216,8 @@ Resources:
     Properties:
       AllocatedStorage: !Ref DatabaseAllocatedStorage
       MultiAZ: !Ref MultiAzDatabase
-      Engine: !Ref DatabaseEngine
-      EngineVersion: !FindInMap
-        - DatabaseMap
-        - !Ref DatabaseEngine
-        - DatabaseVersion
+      Engine: "Postgres"
+      EngineVersion: 11.5
       MasterUsername: !Ref DatabaseUser
       MasterUserPassword: !Ref DatabasePassword
       DBInstanceClass: !Ref DatabaseInstance
@@ -281,34 +239,16 @@ Resources:
           ToPort: 22
           CidrIp: !Ref VpcCidr
         - IpProtocol: tcp
-          FromPort: !FindInMap
-            - DatabaseMap
-            - !Ref DatabaseEngine
-            - port
-          ToPort: !FindInMap
-            - DatabaseMap
-            - !Ref DatabaseEngine
-            - port
+          FromPort: "5432"
+          ToPort: "5432"
           CidrIp: !Ref PrivateSubnet1Cidr
         - IpProtocol: tcp
-          FromPort: !FindInMap
-            - DatabaseMap
-            - !Ref DatabaseEngine
-            - port
-          ToPort: !FindInMap
-            - DatabaseMap
-            - !Ref DatabaseEngine
-            - port
+          FromPort: "5432"
+          ToPort: "5432"
           CidrIp: !Ref PrivateSubnet2Cidr
         - IpProtocol: tcp
-          FromPort: !FindInMap
-            - DatabaseMap
-            - !Ref DatabaseEngine
-            - port
-          ToPort: !FindInMap
-            - DatabaseMap
-            - !Ref DatabaseEngine
-            - port
+          FromPort: "5432"
+          ToPort: "5432"
           CidrIp: !Ref PrivateSubnet3Cidr
       SecurityGroupEgress:
         - IpProtocol: tcp
@@ -410,37 +350,23 @@ Outputs:
     Value: !Ref ArtifactoryS3Bucket
     Description: Actual S3 bucket created for Artifactory
   DatabaseDriver:
-    Value: !FindInMap [DatabaseMap, !Ref DatabaseEngine, Driver]
+    Value: "org.postgresql.Driver"
   DatabasePlugin:
-    Value: !FindInMap [DatabaseMap, !Ref DatabaseEngine, Plugin]
+    Value: "postgresql-42.2.9.jar"
   DatabasePluginUrl:
-    Value: !Sub
-      - "${MainURL}${PluginVersion}"
-      - {
-        MainURL: !FindInMap [DatabaseMap, !Ref DatabaseEngine, PluginURL],
-        PluginVersion: !FindInMap [DatabaseMap, !Ref DatabaseEngine, Plugin]
-        }
+    Value: "https://jdbc.postgresql.org/download/postgresql-42.2.9.jar"
   DatabaseType:
-    Value: !FindInMap [DatabaseMap, !Ref DatabaseEngine, Name]
+    Value: "postgresql"
   DatabaseUrl:
     Value: !Sub
-      - "jdbc:${DatabaseType}://${ArtifactoryDatabaseEndpointAddress}:${port}/${DatabaseName}${extraDatabaseOps}"
+      - "jdbc:postgresql://${ArtifactoryDatabaseEndpointAddress}:5432/${DatabaseName}"
       - {
-        DatabaseType: !FindInMap [DatabaseMap, !Ref DatabaseEngine, Name],
         ArtifactoryDatabaseEndpointAddress: !GetAtt ArtifactoryDatabase.Endpoint.Address,
-        port: !FindInMap [DatabaseMap, !Ref DatabaseEngine, port],
-        extraDatabaseOps: !FindInMap [DatabaseMap, !Ref DatabaseEngine, extraDatabaseOps],
         }
   ProDockerRepo:
-    Value: !FindInMap
-      - ReleaseStageMap
-      - !Ref ReleaseStage
-      - !FindInMap
-        - ProductMap
-        - !Ref ArtifactoryProduct
-        - RepoName
+    Value: "releases-docker.jfrog.io/jfrog/artifactory-pro"
   NginxDockerRepo:
-    Value: !FindInMap [ReleaseStageMap, !Ref ReleaseStage, NginxDockerRepo]
+    Value: "releases-docker.jfrog.io/jfrog/nginx-artifactory-pro"
   JavaOpts:
     Value: !Sub
       - "-Xms${min}g -Xmx${max}g"
