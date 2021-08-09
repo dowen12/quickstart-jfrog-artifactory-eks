@@ -217,6 +217,7 @@ Resources:
       AllocatedStorage: !Ref DatabaseAllocatedStorage
       MultiAZ: !Ref MultiAzDatabase
       Engine: "Postgres"
+      PubliclyAccessible: false
       EngineVersion: 11.5
       MasterUsername: !Ref DatabaseUser
       MasterUserPassword: !Ref DatabasePassword
