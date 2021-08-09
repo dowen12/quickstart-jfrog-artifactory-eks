@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'JFrog Artifactory EKS Quick Start Deployment into a new VPC (qs-1qpmn20kg)'
+Description: 'JFrog Artifactory EKS Quick Start Deployment (qs-1qpmn20kg)'
 Metadata:
   cfn-lint:
     config:
@@ -9,7 +9,8 @@ Metadata:
       ignore_reasons:
         - E9101: "'master' is part of the product naming conventions for now"
   QuickStartDocumentation:
-    EntrypointName: "Launch into a new VPC"
+    EntrypointName: "Parameters for launching into a new VPC"
+    Order: "1"
   AWS::CloudFormation::Interface:
     ParameterGroups:
       - Label:
@@ -43,19 +44,17 @@ Metadata:
       - Label:
           default: JFrog Artifactory configuration
         Parameters:
-          - ArtifactoryProduct
           - HelmChartVersion
-          - ReleaseStage
           - DefaultDeploymentSize
           - ArtifactoryDeploymentSize
           - NumberOfSecondary
-          - SmLicenseCertName
+          - SmLicenseName
+          - SmCertName
           - MasterKey
       - Label:
           default: Amazon RDS configuration
         Parameters:
           - DatabaseName
-          - DatabaseEngine
           - DatabaseUser
           - DatabasePassword
           - DatabaseInstance
@@ -121,24 +120,20 @@ Metadata:
         default: Bastion operating system
       NumberOfSecondary:
         default: Number of secondary pods
-      ArtifactoryProduct:
-        default: Artifactory product to install
       HelmChartVersion:
         default: Artifactory Helm chart version
-      ReleaseStage:
-        default: Release stage of the product to deploy
       DefaultDeploymentSize:
         default: Default Artifactory deployment size
       ArtifactoryDeploymentSize:
         default: Artifactory deployment size
-      SmLicenseCertName:
-        default: Artifactory licenses and certificate secret name
+      SmLicenseName:
+        default: Artifactory licenses secret name
+      SmCertName:
+        default: Artifactory certificate secret name
       MasterKey:
         default: Master server key
       DatabaseName:
         default: Database name
-      DatabaseEngine:
-        default: Database engine
       DatabaseUser:
         default: Database user
       DatabasePassword:
@@ -313,8 +308,8 @@ Parameters:
     Type: Number
   KubernetesVersion:
     Description: Kubernetes control plane version.
-    AllowedValues: ["1.15", "1.16", "1.17", "1.18"]
-    Default: "1.18"
+    AllowedValues: [ "1.17", "1.18", "1.19", "1.20", "1.21" ]
+    Default: "1.21"
     Type: String
   ProvisionBastionHost:
     Description: Choose Disabled to skip creating a bastion instance. Due to the Artifactory nodes being
@@ -337,31 +332,34 @@ Parameters:
   BastionInstanceType:
     Description: Size of the bastion instances.
     AllowedValues:
+      - t3.nano
       - t3.micro
       - t3.small
       - t3.medium
       - t3.large
       - m5.large
       - m5.xlarge
+      - m5.2xlarge
+      - m5.4xlarge
     Default: "t3.micro"
     Type: String
   BastionRootVolumeSize:
-    Description: Size of the root volume on the bastion instances.
+    Description: Size of the root volume in the bastion instances.
     Default: 10
     Type: Number
   BastionEnableTcpForwarding:
-    Description: Choose whether to enable TCPForwarding via the bootstrapping of the bastion instance
-      or not.
+    Description: Choose whether to enable TCP forwarding via bootstrapping of the bastion
+      instance.
     AllowedValues:
       - "true"
       - "false"
     Default: "true"
     Type: String
   BastionEnableX11Forwarding:
-    Description: Choose true to enable X11 via the bootstrapping of the bastion host.
+    Description: Choose true to enable X11 via bootstrapping of the bastion host.
       Setting this value to true enables X Windows over SSH.
-      X11 forwarding can be very useful, but it is also a security risk, so it's recommended
-      that you keep the default (false) setting unless required.
+      X11 forwarding can be useful, but it is also a security risk, so it's recommended
+      that you keep the default (false) setting.
     AllowedValues:
       - "true"
       - "false"
@@ -386,27 +384,13 @@ Parameters:
       - 7
     Default: 2
     Type: Number
-  ArtifactoryProduct:
-    Description: JFrog Artifactory product you wish to install.
-    AllowedValues:
-      - JFrog-Artifactory-Pro
-      - JFrog-Container-Registry
-    Default: JFrog-Artifactory-Pro
-    Type: String
   HelmChartVersion:
     Description: Version of Artifactory that you want to deploy into the Quick Start.
       Please see the release notes to select the version you want to deploy.
       https://www.jfrog.com/confluence/display/RTF/Release+Notes
-    AllowedPattern: ^(([0-9]|[1-9][0-9])\.){2}([1-9][0-9]|[0-9])$
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|[1-9][0-9][0-9])\.){2}([1-9][0-9]|[0-9])$
     ConstraintDescription: A version that matches X.X.X per Artifactory Helm chart releases.
-    Default: '4.9.4'
-    Type: String
-  ReleaseStage:
-    Description: Whether to use the upstream repository that is pre-GA.
-    AllowedValues:
-      - "GA"
-      - "BETA"
-    Default: "GA"
+    Default: '107.23.3'
     Type: String
   DefaultDeploymentSize:
     Description: Choose false to overwrite the standard calculations of memory options to pass Java options for the deployment.
@@ -439,8 +423,13 @@ Parameters:
       - xxxLarge
     Default: xSmall
     Type: String
-  SmLicenseCertName:
-    Description: Secret name created in AWS Secrets Manager, which contains the SSL certificate, certificate key, and Artifactory licenses.
+  SmLicenseName:
+    Description: Secret name created in AWS Secrets Manager, which contains the Artifactory licenses.
+    Default: ''
+    Type: String
+  SmCertName:
+    Description: Secret name created in AWS Secrets Manager, which contains the SSL certificate and certificate key.
+    Default: ''
     Type: String
   MasterKey:
     Description: Master key for the Artifactory cluster. Generate a master key by using the command '$openssl rand -hex 16'.
@@ -451,63 +440,48 @@ Parameters:
     NoEcho: 'true'
     Type: String
   DatabaseName:
-    Description: Name for your database instance. The name must be unique across all database instances
-      owned by your AWS account in the current AWS Region. The database instance identifier is case-insensitive,
-      but is stored as all lowercase (as in "mydbinstance").
+    Description: Name of your database instance. The name must be unique across all instances
+      owned by your AWS account in the current Region. The database instance identifier is case-insensitive,
+      but it's stored in lowercase (as in "mydbinstance").
     AllowedPattern: ^[a-zA-Z]([a-zA-Z0-9])+$
     MinLength: '1'
     MaxLength: '60'
     ConstraintDescription: 1 to 60 alphanumeric characters First character must be a letter.
     Default: artdb
     Type: String
-  DatabaseEngine:
-    Description: Database engine that you want to run.
-    AllowedValues:
-      - MySQL
-      - Postgres
-    Default: Postgres
-    Type: String
   DatabaseUser:
     Description: Login ID for the master user of your database instance.
     MinLength: '1'
     MaxLength: '16'
     AllowedPattern: ^[a-zA-Z]([a-zA-Z0-9])+$
-    ConstraintDescription: 1 to 16 alphanumeric characters. First character must be a letter
+    ConstraintDescription: 1 to 16 alphanumeric characters. The first character must be a letter.
     Default: artifactory
     Type: String
   DatabasePassword:
     Description: Password for the Artifactory database user.
-    AllowedPattern: ^[^ \\']+$
+    AllowedPattern: ^[^ \\'"]+$
     MinLength: '8'
-    MaxLength: '12'
-    ConstraintDescription: Must be at least 8 and no more than
-      12 characters containing letters and (minimum 1 capital letter), numbers and
-      symbols.
+    MaxLength: '20'
+    ConstraintDescription: Must be at least 8 and no more than 20 printable ASCII characters (letters, numbers and symbols. 
+      Can't contain any of / (slash), '(single quote), "(double quote) and @ (at sign).
     NoEcho: 'true'
     Type: String
   DatabaseInstance:
     Description: Size of the database to be deployed as part of the Quick Start.
     AllowedValues:
-      - db.m3.medium
-      - db.m3.large
-      - db.m3.xlarge
-      - db.m3.2xlarge
-      - db.m4.large
-      - db.m4.xlarge
-      - db.m4.2xlarge
-      - db.m4.10xlarge
-      - db.m4.16xlarge
       - db.m5.large
       - db.m5.xlarge
       - db.m5.2xlarge
       - db.m5.4xlarge
+      - db.m5.8xlarge
       - db.m5.12xlarge
+      - db.m5.16xlarge
       - db.m5.24xlarge
-    ConstraintDescription: Must be a valid database instance type.
-    Default: db.m4.large
+    ConstraintDescription: Must be a valid database Instance Type.
+    Default: db.m5.large
     Type: String
   DatabaseAllocatedStorage:
-    Description: Size in gigabytes of the available storage for the database instance.
+    Description: Size in gigabytes of available storage for the database instance.
     MinValue: 5
     MaxValue: 1024
     Default: 10
@@ -521,27 +495,22 @@ Parameters:
     Default: "true"
     Type: String
   QSS3BucketName:
-    AllowedPattern: ^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$
-    ConstraintDescription:
-      Quick Start bucket name can include numbers, lowercase
-      letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen
-      (-).
-    Default: aws-quickstart
-    Description:
-      S3 bucket name for the Quick Start assets. This string can include
-      numbers, lowercase letters, uppercase letters, and hyphens (-). It cannot start
+    Description: S3 bucket name for the Quick Start assets. This string can include
+      numbers, lowercase letters, and hyphens (-). It cannot start
       or end with a hyphen (-).
+    AllowedPattern: ^[0-9a-z]+([0-9a-z-]*[0-9a-z])*$
+    ConstraintDescription: Quick Start bucket name can include numbers, lowercase
+      letters, and hyphens (-). It cannot start or end with a hyphen (-).
+    Default: aws-quickstart
     Type: String
   QSS3KeyPrefix:
-    AllowedPattern: ^[0-9a-zA-Z-/]*$
-    ConstraintDescription:
-      Quick Start key prefix can include numbers, lowercase letters,
-      uppercase letters, hyphens (-), and forward slash (/).
-    Default: quickstart-jfrog-artifactory-eks/
-    Description:
-      S3 key prefix for the Quick Start assets. Quick Start key prefix
+    Description: S3 key prefix for the Quick Start assets. Quick Start key prefix
       can include numbers, lowercase letters, uppercase letters, hyphens (-), and
       forward slash (/).
+    AllowedPattern: ^[0-9a-zA-Z-/]*$
+    ConstraintDescription: Quick Start key prefix can include numbers, lowercase letters,
+      uppercase letters, hyphens (-), and forward slash (/).
+    Default: quickstart-jfrog-artifactory-eks/
     Type: String
   QSS3BucketRegion:
     Default: 'us-east-1'
@@ -590,7 +559,7 @@ Resources:
         PublicSubnet3CIDR: !Ref 'PublicSubnet3Cidr'
         PublicSubnetTag2: "kubernetes.io/role/elb="
 
-  ArtifactoryEksExistingVpcStack:
+  ArtifactoryExistingVpcStack:
     Type: AWS::CloudFormation::Stack
     Properties:
       TemplateURL: !Sub
@@ -622,16 +591,14 @@ Resources:
         BastionRootVolumeSize: !Ref BastionRootVolumeSize
         BastionEnableTcpForwarding: !Ref BastionEnableTcpForwarding
         BastionEnableX11Forwarding: !Ref BastionEnableX11Forwarding
-        ArtifactoryProduct: !Ref ArtifactoryProduct
         HelmChartVersion: !Ref HelmChartVersion
-        ReleaseStage: !Ref ReleaseStage
         DefaultDeploymentSize: !Ref DefaultDeploymentSize
         ArtifactoryDeploymentSize: !Ref ArtifactoryDeploymentSize
         NumberOfSecondary: !Ref NumberOfSecondary
-        SmLicenseCertName: !Ref SmLicenseCertName
+        SmLicenseName: !Ref SmLicenseName
+        SmCertName: !Ref SmCertName
         MasterKey: !Ref MasterKey
         DatabaseName: !Ref DatabaseName
-        DatabaseEngine: !Ref DatabaseEngine
         DatabaseUser: !Ref DatabaseUser
         DatabasePassword: !Ref DatabasePassword
         DatabaseInstance: !Ref DatabaseInstance
@@ -646,8 +613,8 @@ Resources:
         QSS3BucketRegion: !Ref QSS3BucketRegion
 Outputs:
   ArtifactoryUrl:
-    Value: !GetAtt ArtifactoryEksExistingVpcStack.Outputs.ArtifactoryUrl
-    Description: Public Artifactory URL
+    Description: URL of the ELB to access Artifactory
+    Value: !GetAtt ArtifactoryExistingVpcStack.Outputs.ArtifactoryUrl
   BastionIp:
-    Value: !GetAtt ArtifactoryEksExistingVpcStack.Outputs.BastionIp
     Description: Bastion host IP, for admin access via SSH
+    Value: !GetAtt ArtifactoryExistingVpcStack.Outputs.BastionIp
