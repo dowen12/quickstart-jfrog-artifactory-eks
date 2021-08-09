@@ -218,7 +218,7 @@ Resources:
       MultiAZ: !Ref MultiAzDatabase
       Engine: "Postgres"
       PubliclyAccessible: false
-      EngineVersion: 11.5
+      EngineVersion: "11.5"
       MasterUsername: !Ref DatabaseUser
       MasterUserPassword: !Ref DatabasePassword
       DBInstanceClass: !Ref DatabaseInstance
@@ -240,16 +240,16 @@ Resources:
           ToPort: 22
           CidrIp: !Ref VpcCidr
         - IpProtocol: tcp
-          FromPort: "5432"
-          ToPort: "5432"
+          FromPort: 5432
+          ToPort: 5432
           CidrIp: !Ref PrivateSubnet1Cidr
         - IpProtocol: tcp
-          FromPort: "5432"
-          ToPort: "5432"
+          FromPort: 5432
+          ToPort: 5432
           CidrIp: !Ref PrivateSubnet2Cidr
         - IpProtocol: tcp
-          FromPort: "5432"
-          ToPort: "5432"
+          FromPort: 5432
+          ToPort: 5432
           CidrIp: !Ref PrivateSubnet3Cidr
       SecurityGroupEgress:
         - IpProtocol: tcp
