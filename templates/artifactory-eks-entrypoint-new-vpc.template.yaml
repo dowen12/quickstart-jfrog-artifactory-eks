@@ -327,12 +327,12 @@ Parameters:
   PerAccountSharedResources:
     Type: String
     AllowedValues: ['AutoDetect', 'Yes', 'No']
-    Default: 'Yes'
+    Default: 'AutoDetect'
     Description: Choose "No" if you already deployed another EKS Quick Start stack in your AWS account.
   PerRegionSharedResources:
     Type: String
     AllowedValues: ['AutoDetect', 'Yes', 'No']
-    Default: 'Yes'
+    Default: 'AutoDetect'
     Description: Choose "No" if you already deployed another EKS Quick Start stack in your Region.
   BastionInstanceType:
     Description: Size of the bastion instances.
@@ -553,7 +553,7 @@ Parameters:
 #       - AssertDescription: Your AWS Region does *NOT* yet support Amazon EKS
 #         Assert: !Contains
 #           -  - us-west-2
-#              - us-east-1 
+#              - us-east-1
 #              - us-east-2
 #              - eu-west-1
 #              - eu-west-2
