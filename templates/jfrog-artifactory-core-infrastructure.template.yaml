@@ -346,7 +346,7 @@ Resources:
             - EIAMPolicyActionWildcard
           ignore_reasons:
             EIAMPolicyActionWildcard: Cant list all the S3 permissions, due to size limits. s3 get*, put*, and list* not currently supported
-          
+
     Properties:
       PolicyName: S3BucketPermissions
       PolicyDocument:
@@ -390,11 +390,11 @@ Resources:
             Resource:
               - Fn::Join:
                 - ''
-                - - "arn:aws:s3:::"
+                - - !Sub "arn:${AWS::Partition}:s3:::"
                   - !Ref ArtifactoryS3Bucket
               - Fn::Join:
                 - ''
-                - - "arn:aws:s3:::"
+                - - !Sub "arn:${AWS::Partition}:s3:::"
                   - !Ref ArtifactoryS3Bucket
                   - "/*"
       Users:
