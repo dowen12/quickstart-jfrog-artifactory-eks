@@ -287,7 +287,7 @@ Resources:
             - EIAMPolicyActionWildcard
           ignore_reasons:
             EIAMPolicyActionWildcard: Cant list all the S3 permissions, due to size limits. s3 get*, put*, and list* not currently supported
-          
+
     Properties:
       PolicyName: S3BucketPermissions
       PolicyDocument:
