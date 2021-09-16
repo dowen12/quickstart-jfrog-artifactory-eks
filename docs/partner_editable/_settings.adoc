@@ -4,12 +4,16 @@
 :partner-company-name: JFrog, Ltd.
 :doc-month: June
 :doc-year: 2020
-:partner-contributors: Chris Hirsch, Jacob Batkalin and Travis McVey, Trace3
-:quickstart-contributors: Yaniv Bossem and Dylan Owen, AWS Quick Start team
+:partner-contributors: Vinay Aggarwal, JFrog
+//:other-contributors: Akua Mansa, Trek10
+//:aws-contributors: Janine Singh, AWS IoT Partner team
+:quickstart-contributors: Dylan Owen, AWS Quick Start team
 :deployment_time: 60 minutes
 :default_deployment_region: us-east-1
-// Uncomment these two attributes if you are leveraging
-// - an AWS Marketplace listing.
-// Additional content will be auto-generated based on these attributes.
+:parameters_as_appendix:
+// Uncomment the following attribute only if your Quick Start requires custom info (e.g., the product is limited to a specific Region and that will not change). When this attribute is uncommented, any content in the partner-editable/regions.adoc file appears in the "Supported AWS Regions" section of the generated guide instead of the boilerplate info in regions_default.adoc.
+// :custom_supported_regions:
+// Uncomment the following two attributes if you are using an AWS Marketplace listing.
+// Additional content will be generated automatically based on these attributes.
 // :marketplace_subscription:
 // :marketplace_listing_url: https://example.com/
