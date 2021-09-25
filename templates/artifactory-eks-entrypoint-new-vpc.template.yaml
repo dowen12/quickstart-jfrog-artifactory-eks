@@ -70,7 +70,7 @@ Metadata:
           - PerAccountSharedResources
           - PerRegionSharedResources
       - Label:
-          default: AWS Quick Start configuration
+          default: AWS Quick Start configuration (INTERNAL SETTINGS. DO NOT MODIFY)
         Parameters:
           - QSS3BucketName
           - QSS3KeyPrefix
@@ -87,7 +87,7 @@ Metadata:
       AdditionalEKSAdminRoleArn:
         default: Additional EKS admin ARN (IAM role)
       AvailabilityZones:
-        default: Availability Zones
+        default: Availability Zones (You must select 3)
       VpcCidr:
         default: VPC CIDR
       PrivateSubnet1Cidr:
@@ -152,12 +152,12 @@ Metadata:
         default: Number of secondary nodes
       KubernetesVersion:
         default: Kubernetes version
-      QSS3BucketName:
-        default: Quick Start S3 bucket name
-      QSS3KeyPrefix:
-        default: Quick Start S3 key prefix
-      QSS3BucketRegion:
-        default: Quick Start S3 bucket Region
+      QsS3BucketName:
+        default: Quick Start S3 bucket name (Do not modify)
+      QsS3KeyPrefix:
+        default: Quick Start S3 key prefix (Do not modify)
+      QsS3BucketRegion:
+        default: Quick Start S3 bucket region (Do not modify)
 Parameters:
   KeyPairName:
     Description: Name of an existing key pair, which allows you
@@ -390,7 +390,7 @@ Parameters:
       https://www.jfrog.com/confluence/display/RTF/Release+Notes
     AllowedPattern: ^(([0-9]|[1-9][0-9]|[1-9][0-9][0-9])\.){2}([1-9][0-9]|[0-9])$
     ConstraintDescription: A version that matches X.X.X per Artifactory Helm chart releases.
-    Default: '107.23.3'
+    Default: '0.9.3'
     Type: String
   DefaultDeploymentSize:
     Description: Choose false to overwrite the standard calculations of memory options to pass Java options for the deployment.

@@ -72,7 +72,7 @@ Metadata:
           - PerAccountSharedResources
           - PerRegionSharedResources
       - Label:
-          default: AWS Quick Start configuration
+          default: AWS Quick Start configuration (INTERNAL SETTINGS. DO NOT MODIFY)
         Parameters:
           - QSS3BucketName
           - QSS3KeyPrefix
@@ -160,12 +160,12 @@ Metadata:
         default: Number of secondary nodes
       KubernetesVersion:
         default: Kubernetes version
-      QSS3BucketName:
-        default: Quick Start S3 bucket name
-      QSS3KeyPrefix:
-        default: Quick Start S3 key prefix
-      QSS3BucketRegion:
-        default: Quick Start S3 bucket Region
+      QsS3BucketName:
+        default: Quick Start S3 bucket name (Do not modify)
+      QsS3KeyPrefix:
+        default: Quick Start S3 key prefix (Do not modify)
+      QsS3BucketRegion:
+        default: Quick Start S3 bucket region (Do not modify)
 Parameters:
   KeyPairName:
     Description: Name of an existing key pair, which allows you
