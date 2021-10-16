@@ -160,11 +160,11 @@ Metadata:
         default: Number of secondary nodes
       KubernetesVersion:
         default: Kubernetes version
-      QsS3BucketName:
+      QSS3BucketName:
         default: Quick Start S3 bucket name (Do not modify)
-      QsS3KeyPrefix:
+      QSS3KeyPrefix:
         default: Quick Start S3 key prefix (Do not modify)
-      QsS3BucketRegion:
+      QSS3BucketRegion:
         default: Quick Start S3 bucket region (Do not modify)
 Parameters:
   KeyPairName:
@@ -695,6 +695,7 @@ Resources:
         DatabasePlugin: !GetAtt ArtifactoryCoreInfraStack.Outputs.DatabasePlugin
         DatabasePluginUrl: !GetAtt ArtifactoryCoreInfraStack.Outputs.DatabasePluginUrl
         DatabaseType: !GetAtt ArtifactoryCoreInfraStack.Outputs.DatabaseType
+        DatabaseHost: !GetAtt ArtifactoryCoreInfraStack.Outputs.DatabaseHost
         DatabaseUrl: !GetAtt ArtifactoryCoreInfraStack.Outputs.DatabaseUrl
         MasterKey: !Ref MasterKey
         HelmChartVersion: !Ref HelmChartVersion

@@ -48,6 +48,8 @@ Parameters:
     NoEcho: 'true'
   DatabaseUrl:
     Type: String
+  DatabaseHost:
+    Type: String
   DatabaseDriver:
     Type: String
   DatabasePluginUrl:
@@ -230,6 +232,7 @@ Resources:
           db-url:
             Fn::Base64:
               !Sub ${DatabaseUrl}
+
   ArtifactoryDeployment:
     Type: "AWSQS::Kubernetes::Helm"
     Metadata:
@@ -254,11 +257,21 @@ Resources:
       ValueYaml: !Sub
         - |
           global:
+            # TODO: I am not sure how to get these URLs.
+            # ingress URL is dependent on artifactory deployment
+            # now artifactory deployment is dependent on ingress.
+
+            # jfrogUrl: IngressHostName
+            # jfrogUrlUI: IngressHostName
+
+            masterKey: ${MasterKey}
+            joinKey: ${MasterKey}
             database:
               type: ${DatabaseType}
               driver: ${DatabaseDriver}
-              host: "tapzqi0ck5cqir.cvooa7fn0wpy.us-west-2.rds.amazonaws.com"
-              initDBCreation: true
+              host: "${DatabaseHost}"
+              sslMode: disable
+              initDBCreation: false
               secrets:
                 user:
                   name: artifactory-cluster-db
@@ -269,16 +282,18 @@ Resources:
                 url:
                   name: artifactory-cluster-db
                   key: "db-url"
-          artifactory-ha:
+            customCertificates:
+              enabled: false
+          artifactory:
+            enabled: true
             name: artifactory-ha
             deleteDBPropertiesOnStartup: true
             license:
               secret: artifactory-cluster-license
               dataKey: art.lic
-            masterKey: ${MasterKey}
-            joinKey: ${MasterKey}
             preStartCommand: mkdir -p /var/opt/jfrog/artifactory/etc/artifactory/info/; mkdir -p /var/opt/jfrog/artifactory/bootstrap/artifactory/tomcat/lib/; curl ${DatabasePluginUrl} --output /var/opt/jfrog/artifactory/bootstrap/artifactory/tomcat/lib/${DatabasePlugin}
             waitForDatabase: false
+            installerInfo: '{"productId": "CloudFormation_artifactory-ha/1.0.0","features": [{"featureId": "Partner/ACC-006973"}]}'
             postgresql:
               enabled: false
             database:
@@ -382,7 +397,6 @@ Resources:
             service:
               loadBalancerSourceRanges:  [ "${AccessCidr}" ]
             tlsSecretName: artifactory-nginx-tls
-
           xray:
             enabled: false
             postgresql:
@@ -412,8 +426,8 @@ Resources:
             enabled: false
           pipelines:
             enabled: false
-
-          installerInfo: '{"productId": "CloudFormation_artifactory-ha/1.0.0","features": [{"featureId": "Partner/ACC-006973"}]}'
+          insight:
+            enabled: false
         - {
            requests_memory: !FindInMap [DeploymentSize, !Ref ArtifactoryDeploymentSize, requestsMem],
            requests_cpu: !FindInMap [DeploymentSize, !Ref ArtifactoryDeploymentSize, requestsCpu],
@@ -430,7 +444,7 @@ Resources:
       ServiceToken: !Sub "arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:EKS-QuickStart-KubeGet-${KubeClusterName}"
       ClusterName: !Ref KubeClusterName
       Namespace: "jfrog-artifactory"
-      Name: svc/quickstart-artifactory-ha-nginx
+      Name: svc/quickstart-artifactory-ha-artifactory-nginx
       JsonPath: '{.status.loadBalancer.ingress[0].hostname}'
 Outputs:
   ArtifactoryUrl:

@@ -358,16 +358,14 @@ Outputs:
     Value: "https://jdbc.postgresql.org/download/postgresql-42.2.9.jar"
   DatabaseType:
     Value: "postgresql"
+  DatabaseHost:
+    Value: !GetAtt ArtifactoryDatabase.Endpoint.Address
   DatabaseUrl:
     Value: !Sub
       - "jdbc:postgresql://${ArtifactoryDatabaseEndpointAddress}:5432/${DatabaseName}"
       - {
         ArtifactoryDatabaseEndpointAddress: !GetAtt ArtifactoryDatabase.Endpoint.Address,
         }
-  ProDockerRepo:
-    Value: "releases-docker.jfrog.io/jfrog/artifactory-pro"
-  NginxDockerRepo:
-    Value: "releases-docker.jfrog.io/jfrog/nginx-artifactory-pro"
   JavaOpts:
     Value: !Sub
       - "-Xms${min}g -Xmx${max}g"
