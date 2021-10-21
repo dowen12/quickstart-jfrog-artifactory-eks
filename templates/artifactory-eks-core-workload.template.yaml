@@ -48,6 +48,8 @@ Parameters:
     NoEcho: 'true'
   DatabaseUrl:
     Type: String
+  DatabaseHost:
+    Type: String
   DatabaseDriver:
     Type: String
   DatabasePluginUrl:
@@ -135,9 +137,9 @@ Resources:
         kind: Namespace
         apiVersion: v1
         metadata:
-          name: "jfrog-artifactory"
+          name: "jfrog-platform"
           labels:
-            app: "jfrog-artifactory"
+            app: "jfrog-platform"
 
   CertificateStore:
     DependsOn: NameSpace
@@ -151,10 +153,10 @@ Resources:
         apiVersion: v1
         metadata:
           name: artifactory-nginx-tls
-          namespace: "jfrog-artifactory"
+          namespace: "jfrog-platform"
           labels:
-            app: "jfrog-artifactory"
-            chart: "jfrog-artifactory"
+            app: "jfrog-platform"
+            chart: "jfrog-platform"
         type: kubernetes.io/tls
         data:
           tls.crt:
@@ -176,10 +178,10 @@ Resources:
         apiVersion: v1
         metadata:
           name: artifactory-cluster-license
-          namespace: "jfrog-artifactory"
+          namespace: "jfrog-platform"
           labels:
-            app: "jfrog-artifactory"
-            chart: "jfrog-artifactory"
+            app: "jfrog-platform"
+            chart: "jfrog-platform"
         type: Opaque
         stringData:
           art.lic: !Sub
@@ -215,10 +217,10 @@ Resources:
         apiVersion: v1
         metadata:
           name: artifactory-cluster-db
-          namespace: "jfrog-artifactory"
+          namespace: "jfrog-platform"
           labels:
-            app: "jfrog-artifactory"
-            chart: "jfrog-artifactory"
+            app: "jfrog-platform"
+            chart: "jfrog-platform"
         type: Opaque
         data:
           db-user:
@@ -230,6 +232,7 @@ Resources:
           db-url:
             Fn::Base64:
               !Sub ${DatabaseUrl}
+
   ArtifactoryDeployment:
     Type: "AWSQS::Kubernetes::Helm"
     Metadata:
@@ -246,22 +249,67 @@ Resources:
       - CertificateStore
     Properties:
       ClusterID: !Ref KubeClusterName
-      Namespace: "jfrog-artifactory"
-      Name: quickstart-artifactory-ha
-      Chart: jfrog/artifactory-ha
+      Namespace: "jfrog-platform"
+      Name: quickstart-jfrog-platform
+      Chart: jfrog/jfrog-platform
       Repository: "https://charts.jfrog.io/"
       Version: !Ref HelmChartVersion
       ValueYaml: !Sub
         - |
+          global:
+            # TODO: I am not sure how to get these URLs.
+            # ingress URL is dependent on artifactory deployment
+            # now artifactory deployment is dependent on ingress.
+
+            # jfrogUrl: IngressHostName
+            # jfrogUrlUI: IngressHostName
+
+            masterKey: ${MasterKey}
+            joinKey: ${MasterKey}
+            database:
+              type: ${DatabaseType}
+              driver: ${DatabaseDriver}
+              host: "${DatabaseHost}"
+              sslMode: disable
+              initDBCreation: false
+              secrets:
+                user:
+                  name: artifactory-cluster-db
+                  key: "db-user"
+                password:
+                  name: artifactory-cluster-db
+                  key: "db-password"
+                url:
+                  name: artifactory-cluster-db
+                  key: "db-url"
+            customCertificates:
+              enabled: false
           artifactory:
+            enabled: true
             name: artifactory-ha
             deleteDBPropertiesOnStartup: true
             license:
               secret: artifactory-cluster-license
               dataKey: art.lic
-            masterKey: ${MasterKey}
-            joinKey: ${MasterKey}
             preStartCommand: mkdir -p /var/opt/jfrog/artifactory/etc/artifactory/info/; mkdir -p /var/opt/jfrog/artifactory/bootstrap/artifactory/tomcat/lib/; curl ${DatabasePluginUrl} --output /var/opt/jfrog/artifactory/bootstrap/artifactory/tomcat/lib/${DatabasePlugin}
+            waitForDatabase: false
+            installerInfo: '{"productId": "CloudFormation_artifactory-ha/1.0.0","features": [{"featureId": "Partner/ACC-006973"}]}'
+            postgresql:
+              enabled: false
+            database:
+              type: ${DatabaseType}
+              driver: ${DatabaseDriver}
+              secrets:
+                user:
+                  name: artifactory-cluster-db
+                  key: "db-user"
+                password:
+                  name: artifactory-cluster-db
+                  key: "db-password"
+                url:
+                  name: artifactory-cluster-db
+                  key: "db-url"
+
             persistence:
               enabled: false
               local: false
@@ -343,26 +391,43 @@ Resources:
                 topologyKey: "kubernetes.io/hostname"
           postgresql:
             enabled: false
-          database:
-            type: ${DatabaseType}
-            driver: ${DatabaseDriver}
-            secrets:
-              user:
-                name: artifactory-cluster-db
-                key: "db-user"
-              password:
-                name: artifactory-cluster-db
-                key: "db-password"
-              url:
-                name: artifactory-cluster-db
-                key: "db-url"
           nginx:
             enabled: true
             replicaCount: 3
             service:
               loadBalancerSourceRanges:  [ "${AccessCidr}" ]
             tlsSecretName: artifactory-nginx-tls
-          installerInfo: '{"productId": "CloudFormation_artifactory-ha/1.0.0","features": [{"featureId": "Partner/ACC-006973"}]}'
+          xray:
+            enabled: false
+            postgresql:
+              enabled: false
+            database:
+              type: ${DatabaseType}
+              driver: ${DatabaseDriver}
+              secrets:
+                user:
+                  name: artifactory-cluster-db
+                  key: "db-user"
+                password:
+                  name: artifactory-cluster-db
+                  key: "db-password"
+                url:
+                  name: artifactory-cluster-db
+                  key: "db-url"
+          rabbitmq:
+            enabled: false
+          postgresql:
+            enabled: false
+          redis:
+            enabled: false
+          distribution:
+            enabled: false
+          mission-control:
+            enabled: false
+          pipelines:
+            enabled: false
+          insight:
+            enabled: false
         - {
            requests_memory: !FindInMap [DeploymentSize, !Ref ArtifactoryDeploymentSize, requestsMem],
            requests_cpu: !FindInMap [DeploymentSize, !Ref ArtifactoryDeploymentSize, requestsCpu],
@@ -378,8 +443,8 @@ Resources:
     Properties:
       ServiceToken: !Sub "arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:EKS-QuickStart-KubeGet-${KubeClusterName}"
       ClusterName: !Ref KubeClusterName
-      Namespace: "jfrog-artifactory"
-      Name: svc/quickstart-artifactory-ha-nginx
+      Namespace: "jfrog-platform"
+      Name: svc/quickstart-jfrog-platform-artifactory-nginx
       JsonPath: '{.status.loadBalancer.ingress[0].hostname}'
 Outputs:
   ArtifactoryUrl:
