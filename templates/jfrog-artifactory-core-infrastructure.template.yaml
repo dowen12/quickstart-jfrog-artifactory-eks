@@ -366,6 +366,10 @@ Outputs:
       - {
         ArtifactoryDatabaseEndpointAddress: !GetAtt ArtifactoryDatabase.Endpoint.Address,
         }
+  XrayDatabaseUrl:
+    Value: !Sub
+      - "${ArtifactoryDatabaseEndpointAddress}:5432/xraydb?sslmode=disable"
+      - ArtifactoryDatabaseEndpointAddress: !GetAtt ArtifactoryDatabase.Endpoint.Address
   JavaOpts:
     Value: !Sub
       - "-Xms${min}g -Xmx${max}g"

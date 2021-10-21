@@ -137,9 +137,9 @@ Resources:
         kind: Namespace
         apiVersion: v1
         metadata:
-          name: "jfrog-artifactory"
+          name: "jfrog-platform"
           labels:
-            app: "jfrog-artifactory"
+            app: "jfrog-platform"
 
   CertificateStore:
     DependsOn: NameSpace
@@ -153,10 +153,10 @@ Resources:
         apiVersion: v1
         metadata:
           name: artifactory-nginx-tls
-          namespace: "jfrog-artifactory"
+          namespace: "jfrog-platform"
           labels:
-            app: "jfrog-artifactory"
-            chart: "jfrog-artifactory"
+            app: "jfrog-platform"
+            chart: "jfrog-platform"
         type: kubernetes.io/tls
         data:
           tls.crt:
@@ -178,10 +178,10 @@ Resources:
         apiVersion: v1
         metadata:
           name: artifactory-cluster-license
-          namespace: "jfrog-artifactory"
+          namespace: "jfrog-platform"
           labels:
-            app: "jfrog-artifactory"
-            chart: "jfrog-artifactory"
+            app: "jfrog-platform"
+            chart: "jfrog-platform"
         type: Opaque
         stringData:
           art.lic: !Sub
@@ -217,10 +217,10 @@ Resources:
         apiVersion: v1
         metadata:
           name: artifactory-cluster-db
-          namespace: "jfrog-artifactory"
+          namespace: "jfrog-platform"
           labels:
-            app: "jfrog-artifactory"
-            chart: "jfrog-artifactory"
+            app: "jfrog-platform"
+            chart: "jfrog-platform"
         type: Opaque
         data:
           db-user:
@@ -249,8 +249,8 @@ Resources:
       - CertificateStore
     Properties:
       ClusterID: !Ref KubeClusterName
-      Namespace: "jfrog-artifactory"
-      Name: quickstart-artifactory-ha
+      Namespace: "jfrog-platform"
+      Name: quickstart-jfrog-platform
       Chart: jfrog/jfrog-platform
       Repository: "https://charts.jfrog.io/"
       Version: !Ref HelmChartVersion
@@ -443,8 +443,8 @@ Resources:
     Properties:
       ServiceToken: !Sub "arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:EKS-QuickStart-KubeGet-${KubeClusterName}"
       ClusterName: !Ref KubeClusterName
-      Namespace: "jfrog-artifactory"
-      Name: svc/quickstart-artifactory-ha-artifactory-nginx
+      Namespace: "jfrog-platform"
+      Name: svc/quickstart-jfrog-platform-artifactory-nginx
       JsonPath: '{.status.loadBalancer.ingress[0].hostname}'
 Outputs:
   ArtifactoryUrl:
