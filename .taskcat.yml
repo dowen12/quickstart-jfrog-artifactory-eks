@@ -31,11 +31,11 @@ tests:
       QSS3KeyPrefix: "quickstart-jfrog-artifactory-eks/"
       QSS3BucketRegion: "$[taskcat_current_region]"
       DatabaseInstance: "db.m5.large"
-      HelmChartVersion: '4.13.2'
+      HelmChartVersion: '10.0.0'
       NumberOfSecondary: "2"
-      ArtifactoryServerName: "artifactory"
       MasterKey: "override"
-      SmLicenseCertName: "override"
+      SmLicenseName: "override"
+      SmCertName: "override"
       MultiAzDatabase: "false"
       PerAccountSharedResources: "AutoDetect"
       PerRegionSharedResources: "AutoDetect"

@@ -46,19 +46,17 @@ Metadata:
       - Label:
           default: JFrog Artifactory configuration
         Parameters:
-          - ArtifactoryProduct
           - HelmChartVersion
-          - ReleaseStage
           - DefaultDeploymentSize
           - ArtifactoryDeploymentSize
           - NumberOfSecondary
-          - SmLicenseCertName
+          - SmLicenseName
+          - SmCertName
           - MasterKey
       - Label:
           default: Amazon RDS configuration
         Parameters:
           - DatabaseName
-          - DatabaseEngine
           - DatabaseUser
           - DatabasePassword
           - DatabaseInstance
@@ -73,9 +71,8 @@ Metadata:
           - NodeVolumeSize
           - PerAccountSharedResources
           - PerRegionSharedResources
-          # - LambdaZipsBucketName
       - Label:
-          default: AWS Quick Start configuration
+          default: AWS Quick Start configuration (INTERNAL SETTINGS. DO NOT MODIFY)
         Parameters:
           - QSS3BucketName
           - QSS3KeyPrefix
@@ -129,26 +126,22 @@ Metadata:
         default: Bastion enable X11 forwarding
       BastionOS:
         default: Bastion operating system
-      ArtifactoryProduct:
-        default: Artifactory product to install
       HelmChartVersion:
         default: Artifactory Helm chart version
-      ReleaseStage:
-        default: Release stage of the product to deploy
       DefaultDeploymentSize:
         default: Default Artifactory deployment size
       ArtifactoryDeploymentSize:
         default: Artifactory deployment size
       NumberOfSecondary:
         default: Number of secondary pods
-      SmLicenseCertName:
-        default: Artifactory licenses and certificate secret name
+      SmLicenseName:
+        default: Artifactory licenses secret name
+      SmCertName:
+        default: Artifactory certificate secret name
       MasterKey:
         default: Master server key
       DatabaseName:
         default: Database name
-      DatabaseEngine:
-        default: Database engine
       DatabaseUser:
         default: Database user
       DatabasePassword:
@@ -168,13 +161,11 @@ Metadata:
       KubernetesVersion:
         default: Kubernetes version
       QSS3BucketName:
-        default: Quick Start S3 bucket name
+        default: Quick Start S3 bucket name (Do not modify)
       QSS3KeyPrefix:
-        default: Quick Start S3 key prefix
+        default: Quick Start S3 key prefix (Do not modify)
       QSS3BucketRegion:
-        default: Quick Start S3 bucket Region
-      # LambdaZipsBucketName:
-      #   default: Lambda zips bucket name
+        default: Quick Start S3 bucket region (Do not modify)
 Parameters:
   KeyPairName:
     Description: Name of an existing key pair, which allows you
@@ -320,8 +311,8 @@ Parameters:
     Type: Number
   KubernetesVersion:
     Description: Kubernetes control plane version.
-    AllowedValues: ["1.15", "1.16", "1.17", "1.18"]
-    Default: "1.18"
+    AllowedValues: [ "1.17", "1.18", "1.19", "1.20", "1.21" ]
+    Default: "1.21"
     Type: String
   ProvisionBastionHost:
     Description: Choose Disabled to skip creating a bastion instance. Due to the Artifactory nodes being
@@ -394,27 +385,13 @@ Parameters:
       - 7
     Default: 2
     Type: Number
-  ArtifactoryProduct:
-    Description: JFrog Artifactory product you wish to install.
-    AllowedValues:
-      - JFrog-Artifactory-Pro
-      - JFrog-Container-Registry
-    Default: JFrog-Artifactory-Pro
-    Type: String
   HelmChartVersion:
     Description: Version of Artifactory that you want to deploy into the Quick Start.
       Please see the release notes to select the version you want to deploy.
       https://www.jfrog.com/confluence/display/RTF/Release+Notes
-    AllowedPattern: ^(([0-9]|[1-9][0-9])\.){2}([1-9][0-9]|[0-9])$
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|[1-9][0-9][0-9])\.){2}([1-9][0-9]|[0-9])$
     ConstraintDescription: A Helm chart version that matches X.X.X per Artifactory releases.
-    Default: '4.9.4'
-    Type: String
-  ReleaseStage:
-    Description: Whether to use the upstream repository that is pre-GA.
-    AllowedValues:
-      - "GA"
-      - "BETA"
-    Default: "GA"
+    Default: '10.0.0'
     Type: String
   DefaultDeploymentSize:
     Description: Choose false to overwrite the standard calculations of memory options to pass Java options for the deployment.
@@ -447,8 +424,13 @@ Parameters:
       - xxxLarge
     Default: xSmall
     Type: String
-  SmLicenseCertName:
-    Description: Secret name created in AWS Secrets Manager, which contains the SSL certificate, certificate key, and Artifactory licenses.
+  SmLicenseName:
+    Description: Secret name created in AWS Secrets Manager, which contains the Artifactory licenses.
+    Default: ''
+    Type: String
+  SmCertName:
+    Description: Secret name created in AWS Secrets Manager, which contains the SSL certificate and certificate key.
+    Default: ''
     Type: String
   MasterKey:
     Description: Master key for the Artifactory cluster. Generate a master key by using the command '$openssl rand -hex 16'.
@@ -467,13 +449,6 @@ Parameters:
     MaxLength: '60'
     ConstraintDescription: 1 to 60 alphanumeric characters First character must be a letter.
     Default: artdb
-    Type: String
-  DatabaseEngine:
-    Description: Database engine that you want to run.
-    AllowedValues:
-      - MySQL
-      - Postgres
-    Default: Postgres
     Type: String
   DatabaseUser:
     Description: Login ID for the master user of your database instance.
@@ -555,16 +530,13 @@ Parameters:
     Default: 'us-east-1'
     Description: AWS Region where the Quick Start S3 bucket (QSS3BucketName) is hosted. When using your own bucket, you must specify this value.
     Type: String
-  # LambdaZipsBucketName:
-  #   Description: '[OPTIONAL] The name of the S3 bucket where the Lambda .zip
-  #     files should be placed. If you leave this parameter blank, an S3 bucket will be created.'
-  #   Default: ''
-  #   Type: String
 Conditions:
-  ArtifactoryHa: !Equals [!Ref ArtifactoryProduct, 'JFrog-Artifactory-Pro']
-  BastionSecurityGroup: !And [!Equals [!Ref ArtifactoryProduct, 'JFrog-Artifactory-Pro'], !Equals [!Ref 'ProvisionBastionHost', 'Enabled']]
-  DefaultSize: !Equals [!Ref DefaultDeploymentSize, "true"]
-  UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'aws-quickstart']
+  BastionSecurityGroup: !Equals [!Ref 'ProvisionBastionHost', 'Enabled']
+  DefaultSize         : !Equals [!Ref DefaultDeploymentSize, "true"]
+  UsingDefaultBucket  : !Equals [!Ref QSS3BucketName, 'aws-quickstart']
+  SmLicenseNameExists : !Not [!Equals [!Ref 'SmLicenseName', '']]
+  SmCertNameExists    : !Not [!Equals [!Ref 'SmCertName', '']]
+
 Resources:
   JFrogEKSAdvancedConfigStack:
     Type: AWS::CloudFormation::Stack
@@ -580,8 +552,8 @@ Resources:
         VaultUIAccessCIDR: !Ref RemoteAccessCidr
         NodeVolumeSize: !Ref NodeVolumeSize
         KubernetesVersion: !Ref KubernetesVersion
-        NodeGroupName: !Ref ArtifactoryProduct
-        Labels: !Sub "partition=${ArtifactoryProduct}"
+        NodeGroupName: "JFrog-Artifactory-Pro"
+        Labels: !Sub "partition=JFrog-Artifactory-Pro"
         BastionInstanceType: !Ref BastionInstanceType
         BastionOS: !Ref BastionOS
         BastionEnableX11Forwarding: !Ref BastionEnableX11Forwarding
@@ -613,14 +585,13 @@ Resources:
         AdditionalEKSAdminUserArn: !Join [",", !Ref AdditionalEKSAdminUserArn]
         AdditionalEKSAdminRoleArn: !Join [",", !Ref AdditionalEKSAdminRoleArn]
         NodeInstanceType: !Ref NodeInstanceType
-        NumberOfNodes: !If [ArtifactoryHa, '1', !Ref NumberOfSecondary]
-        MaxNumberOfNodes: !If [ArtifactoryHa, '1', !Ref NumberOfSecondary]
+        NumberOfNodes: '1'
+        MaxNumberOfNodes: '1'
         QSS3BucketName: !Ref QSS3BucketName
         QSS3KeyPrefix: !Sub "${QSS3KeyPrefix}submodules/quickstart-amazon-eks/"
         QSS3BucketRegion: !Ref QSS3BucketRegion
   
   ArtifactorySecondaryNodesStack:
-    Condition: ArtifactoryHa
     Type: "AWS::CloudFormation::Stack"
     Properties:
       TemplateURL: !Sub
@@ -635,9 +606,9 @@ Resources:
         NodeInstanceType: !Ref NodeInstanceType
         NumberOfNodes: !Ref NumofSecondaryNodes
         MaxNumberOfNodes: !Ref NumofSecondaryNodes
-        NodeGroupName: !Sub "${ArtifactoryProduct}-secondary"
+        NodeGroupName: !Sub "JFrog-Artifactory-Pro-secondary"
         NodeVolumeSize: !Ref NodeVolumeSize
-        Labels: !Sub "partition=${ArtifactoryProduct}-secondary"
+        Labels: !Sub "partition=JFrog-Artifactory-Pro-secondary"
         EKSClusterName: !GetAtt EKSStack.Outputs.EKSClusterName
 
   # Allow the bastion host to SSH into the secondary node pools
@@ -654,7 +625,6 @@ Resources:
 
   # Allow the secondary node pools to bidirectionally communicate with "initial" (master) nodes
   RegularToMasterIngress:
-    Condition: ArtifactoryHa
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       Description: Allows regular nodes to communicate with master nodes
@@ -665,7 +635,6 @@ Resources:
       ToPort: 65535
 
   MasterToRegularIngress:
-    Condition: ArtifactoryHa
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       Description: Allows master nodes to communicate with regular agent nodes
@@ -692,13 +661,10 @@ Resources:
         SubnetIds: !Join [",", [!Ref PrivateSubnet1Id, !Ref PrivateSubnet2Id, !Ref PrivateSubnet3Id]]
         DatabaseAllocatedStorage: !Ref DatabaseAllocatedStorage
         MultiAzDatabase: !Ref MultiAzDatabase
-        DatabaseEngine: !Ref DatabaseEngine
         DatabaseUser: !Ref DatabaseUser
         DatabasePassword: !Ref DatabasePassword
         DatabaseInstance: !Ref DatabaseInstance
         DatabaseName: !Ref DatabaseName
-        ArtifactoryProduct: !Ref ArtifactoryProduct
-        ReleaseStage: !Ref ReleaseStage
         InstanceType: !Ref NodeInstanceType
 
   ArtifactoryCoreStack:
@@ -711,40 +677,30 @@ Resources:
       Parameters:
         NumberOfSecondary: !Ref NumberOfSecondary
         AccessCidr: !Ref AccessCidr
-        ArtifactoryProduct: !Ref ArtifactoryProduct
-        ArtifactoryLicense1: !If [ArtifactoryHa, !Sub '{{resolve:secretsmanager:${SmLicenseCertName}:SecretString:ArtifactoryLicense1}}', '']
-        ArtifactoryLicense2: !If [ArtifactoryHa, !Sub '{{resolve:secretsmanager:${SmLicenseCertName}:SecretString:ArtifactoryLicense2}}', '']
-        ArtifactoryLicense3: !If [ArtifactoryHa, !Sub '{{resolve:secretsmanager:${SmLicenseCertName}:SecretString:ArtifactoryLicense3}}', '']
-        ArtifactoryLicense4: !If [ArtifactoryHa, !Sub '{{resolve:secretsmanager:${SmLicenseCertName}:SecretString:ArtifactoryLicense4}}', '']
-        Certificate: !Sub '{{resolve:secretsmanager:${SmLicenseCertName}:SecretString:Certificate}}'
-        CertificateKey: !Sub '{{resolve:secretsmanager:${SmLicenseCertName}:SecretString:CertificateKey}}'
+        ArtifactoryLicense1: !If [SmLicenseNameExists, !Sub '{{resolve:secretsmanager:${SmLicenseName}:SecretString:ArtifactoryLicense1}}', '']
+        ArtifactoryLicense2: !If [SmLicenseNameExists, !Sub '{{resolve:secretsmanager:${SmLicenseName}:SecretString:ArtifactoryLicense2}}', '']
+        ArtifactoryLicense3: !If [SmLicenseNameExists, !Sub '{{resolve:secretsmanager:${SmLicenseName}:SecretString:ArtifactoryLicense3}}', '']
+        ArtifactoryLicense4: !If [SmLicenseNameExists, !Sub '{{resolve:secretsmanager:${SmLicenseName}:SecretString:ArtifactoryLicense4}}', '']
+        ArtifactoryLicense5: !If [SmLicenseNameExists, !Sub '{{resolve:secretsmanager:${SmLicenseName}:SecretString:ArtifactoryLicense5}}', '']
+        ArtifactoryLicense6: !If [SmLicenseNameExists, !Sub '{{resolve:secretsmanager:${SmLicenseName}:SecretString:ArtifactoryLicense6}}', '']
+        ArtifactoryLicense7: !If [SmLicenseNameExists, !Sub '{{resolve:secretsmanager:${SmLicenseName}:SecretString:ArtifactoryLicense7}}', '']
+        Certificate: !If [SmCertNameExists, !Sub '{{resolve:secretsmanager:${SmCertName}:SecretString:Certificate}}', '']
+        CertificateKey: !If [SmCertNameExists, !Sub '{{resolve:secretsmanager:${SmCertName}:SecretString:CertificateKey}}', '']
         ArtifactoryIamAcessKey: !GetAtt ArtifactoryCoreInfraStack.Outputs.ArtifactoryIamAcessKey
         SecretAccessKey: !GetAtt ArtifactoryCoreInfraStack.Outputs.SecretAccessKey
         ArtifactoryS3Bucket: !GetAtt ArtifactoryCoreInfraStack.Outputs.S3Bucket
-        # ProDockerRepo: !GetAtt ArtifactoryCoreInfraStack.Outputs.ProDockerRepo
-        # NginxDockerRepo: !GetAtt ArtifactoryCoreInfraStack.Outputs.NginxDockerRepo
         DatabaseUser: !Ref DatabaseUser
         DatabasePassword: !Ref DatabasePassword
         DatabaseDriver: !GetAtt ArtifactoryCoreInfraStack.Outputs.DatabaseDriver
         DatabasePlugin: !GetAtt ArtifactoryCoreInfraStack.Outputs.DatabasePlugin
         DatabasePluginUrl: !GetAtt ArtifactoryCoreInfraStack.Outputs.DatabasePluginUrl
         DatabaseType: !GetAtt ArtifactoryCoreInfraStack.Outputs.DatabaseType
+        DatabaseHost: !GetAtt ArtifactoryCoreInfraStack.Outputs.DatabaseHost
         DatabaseUrl: !GetAtt ArtifactoryCoreInfraStack.Outputs.DatabaseUrl
         MasterKey: !Ref MasterKey
         HelmChartVersion: !Ref HelmChartVersion
         ArtifactoryDeploymentSize: !If [DefaultSize, !GetAtt ArtifactoryCoreInfraStack.Outputs.DeploymentSize, !Ref ArtifactoryDeploymentSize]
-        ReleaseStage: !Ref ReleaseStage
         KubeClusterName: !GetAtt EKSStack.Outputs.EKSClusterName
-        # QsS3Uri: !Sub
-        #   - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}
-        #   - S3Bucket: !If
-        #       - UsingDefaultBucket
-        #       - !Sub 'aws-quickstart-${AWS::Region}'
-        #       - !Ref 'QSS3BucketName'
-        #     S3Region: !If
-        #       - UsingDefaultBucket
-        #       - !Ref 'AWS::Region'
-        #       - !Ref 'QSS3BucketRegion'
 Outputs:
   ArtifactoryUrl:
     Value: !GetAtt ArtifactoryCoreStack.Outputs.ArtifactoryUrl

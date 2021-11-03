@@ -13,8 +13,6 @@ Parameters:
     Type: Number
   AccessCidr:
     Type: String
-  ArtifactoryProduct:
-    Type: String
   ArtifactoryLicense1:
     Type: String
   ArtifactoryLicense2:
@@ -22,6 +20,12 @@ Parameters:
   ArtifactoryLicense3:
     Type: String
   ArtifactoryLicense4:
+    Type: String
+  ArtifactoryLicense5:
+    Type: String
+  ArtifactoryLicense6:
+    Type: String
+  ArtifactoryLicense7:
     Type: String
   ArtifactoryIamAcessKey:
     Type: String
@@ -44,6 +48,8 @@ Parameters:
     NoEcho: 'true'
   DatabaseUrl:
     Type: String
+  DatabaseHost:
+    Type: String
   DatabaseDriver:
     Type: String
   DatabasePluginUrl:
@@ -59,38 +65,9 @@ Parameters:
     Type: String
   ArtifactoryDeploymentSize:
     Type: String
-  ReleaseStage:
-    Type: String
-    Default: BETA
   KubeClusterName:
     Type: String
 Mappings:
-  ArtifactoryProductMap:
-    JFrog-Artifactory-Pro:
-      namespace: jfrog-artifactory
-      app: jfrog-artifactory
-      infoFile: 'installer-info.json'
-      BETA: JFrog-Artifactory-Pro-BETA
-      GA: JFrog-Artifactory-Pro-GA
-    JFrog-Container-Registry:
-      namespace: jfrog-container-registry
-      app: jfrog-container-registry
-      infoFile: 'installer-info-jcr.json'
-      BETA: JFrog-Container-Registry-BETA
-      GA: JFrog-Container-Registry-GA
-  HelmRepoMap:
-    JFrog-Artifactory-Pro-BETA:
-      RepoUrl: https://earlyaccess.jfrog.io/artifactory/helm/
-      HelmChartVersion: 2.0.11
-    JFrog-Artifactory-Pro-GA:
-      RepoUrl: https://charts.jfrog.io/
-      HelmChartVersion: 3.0.2
-    JFrog-Container-Registry-BETA:
-      RepoUrl: https://charts.jfrog.io/
-      HelmChartVersion: 2.0.8
-    JFrog-Container-Registry-GA:
-      RepoUrl: https://charts.jfrog.io/
-      HelmChartVersion: 2.0.8
   DeploymentSize:
     xxxLarge:
       requestsMem: "240Gi"
@@ -149,9 +126,6 @@ Mappings:
       javaOptsXms: "4g"
       javaOptsXmx: "4g"
 
-Conditions:
-  ArtifactoryHa: !Equals [!Ref ArtifactoryProduct, 'JFrog-Artifactory-Pro']
-  # JcrInstall: !Equals [!Ref ArtifactoryProduct, 'JFrog-Container-Registry']
 Resources:
   NameSpace:
     Type: "Custom::KubeManifest"
@@ -163,9 +137,9 @@ Resources:
         kind: Namespace
         apiVersion: v1
         metadata:
-          name: !FindInMap [ArtifactoryProductMap, !Ref ArtifactoryProduct, namespace]
+          name: "jfrog-platform"
           labels:
-            app: !FindInMap [ArtifactoryProductMap, !Ref ArtifactoryProduct, app]
+            app: "jfrog-platform"
 
   CertificateStore:
     DependsOn: NameSpace
@@ -179,10 +153,10 @@ Resources:
         apiVersion: v1
         metadata:
           name: artifactory-nginx-tls
-          namespace: !FindInMap [ArtifactoryProductMap, !Ref ArtifactoryProduct, namespace]
+          namespace: "jfrog-platform"
           labels:
-            app: !FindInMap [ArtifactoryProductMap, !Ref ArtifactoryProduct, app]
-            chart: !FindInMap [ArtifactoryProductMap, !Ref ArtifactoryProduct, app]
+            app: "jfrog-platform"
+            chart: "jfrog-platform"
         type: kubernetes.io/tls
         data:
           tls.crt:
@@ -193,7 +167,6 @@ Resources:
               !Join ["\n", "Fn::Split": ["|", !Ref CertificateKey]]
 
   LicenseStore:
-    Condition: ArtifactoryHa
     DependsOn: NameSpace
     Type: "Custom::KubeManifest"
     Version: '1.0'
@@ -205,10 +178,10 @@ Resources:
         apiVersion: v1
         metadata:
           name: artifactory-cluster-license
-          namespace: !FindInMap [ArtifactoryProductMap, !Ref ArtifactoryProduct, namespace]
+          namespace: "jfrog-platform"
           labels:
-            app: !FindInMap [ArtifactoryProductMap, !Ref ArtifactoryProduct, app]
-            chart: !FindInMap [ArtifactoryProductMap, !Ref ArtifactoryProduct, app]
+            app: "jfrog-platform"
+            chart: "jfrog-platform"
         type: Opaque
         stringData:
           art.lic: !Sub
@@ -223,6 +196,15 @@ Resources:
 
 
             ${ArtifactoryLicense4}
+
+
+            ${ArtifactoryLicense5}
+
+
+            ${ArtifactoryLicense6}
+
+
+            ${ArtifactoryLicense7}
   SecureStoreDatabase:
     DependsOn: NameSpace
     Type: "Custom::KubeManifest"
@@ -235,10 +217,10 @@ Resources:
         apiVersion: v1
         metadata:
           name: artifactory-cluster-db
-          namespace: !FindInMap [ArtifactoryProductMap, !Ref ArtifactoryProduct, namespace]
+          namespace: "jfrog-platform"
           labels:
-            app: !FindInMap [ArtifactoryProductMap, !Ref ArtifactoryProduct, app]
-            chart: !FindInMap [ArtifactoryProductMap, !Ref ArtifactoryProduct, app]
+            app: "jfrog-platform"
+            chart: "jfrog-platform"
         type: Opaque
         data:
           db-user:
@@ -250,8 +232,8 @@ Resources:
           db-url:
             Fn::Base64:
               !Sub ${DatabaseUrl}
+
   ArtifactoryDeployment:
-    Condition: ArtifactoryHa
     Type: "AWSQS::Kubernetes::Helm"
     Metadata:
       cfn-lint:
@@ -267,22 +249,67 @@ Resources:
       - CertificateStore
     Properties:
       ClusterID: !Ref KubeClusterName
-      Namespace: !FindInMap [ArtifactoryProductMap, !Ref ArtifactoryProduct, namespace]
-      Name: quickstart-artifactory-ha
-      Chart: jfrog/artifactory-ha
-      Repository: !FindInMap [HelmRepoMap, !FindInMap [ArtifactoryProductMap, !Ref ArtifactoryProduct, !Ref ReleaseStage], RepoUrl]
+      Namespace: "jfrog-platform"
+      Name: quickstart-jfrog-platform
+      Chart: jfrog/jfrog-platform
+      Repository: "https://charts.jfrog.io/"
       Version: !Ref HelmChartVersion
       ValueYaml: !Sub
         - |
+          global:
+            # TODO: I am not sure how to get these URLs.
+            # ingress URL is dependent on artifactory deployment
+            # now artifactory deployment is dependent on ingress.
+
+            # jfrogUrl: IngressHostName
+            # jfrogUrlUI: IngressHostName
+
+            masterKey: ${MasterKey}
+            joinKey: ${MasterKey}
+            database:
+              type: ${DatabaseType}
+              driver: ${DatabaseDriver}
+              host: "${DatabaseHost}"
+              sslMode: disable
+              initDBCreation: false
+              secrets:
+                user:
+                  name: artifactory-cluster-db
+                  key: "db-user"
+                password:
+                  name: artifactory-cluster-db
+                  key: "db-password"
+                url:
+                  name: artifactory-cluster-db
+                  key: "db-url"
+            customCertificates:
+              enabled: false
           artifactory:
+            enabled: true
             name: artifactory-ha
             deleteDBPropertiesOnStartup: true
             license:
               secret: artifactory-cluster-license
               dataKey: art.lic
-            masterKey: ${MasterKey}
-            joinKey: ${MasterKey}
-            preStartCommand: mkdir -p /var/opt/jfrog/artifactory/etc/artifactory/info/; mkdir -p /var/opt/jfrog/artifactory/bootstrap/artifactory/tomcat/lib/; wget -O  /var/opt/jfrog/artifactory/bootstrap/artifactory/tomcat/lib/${DatabasePlugin} ${DatabasePluginUrl}
+            preStartCommand: mkdir -p /var/opt/jfrog/artifactory/etc/artifactory/info/; mkdir -p /var/opt/jfrog/artifactory/bootstrap/artifactory/tomcat/lib/; curl ${DatabasePluginUrl} --output /var/opt/jfrog/artifactory/bootstrap/artifactory/tomcat/lib/${DatabasePlugin}
+            waitForDatabase: false
+            installerInfo: '{"productId": "CloudFormation_artifactory-ha/1.0.0","features": [{"featureId": "Partner/ACC-006973"}]}'
+            postgresql:
+              enabled: false
+            database:
+              type: ${DatabaseType}
+              driver: ${DatabaseDriver}
+              secrets:
+                user:
+                  name: artifactory-cluster-db
+                  key: "db-user"
+                password:
+                  name: artifactory-cluster-db
+                  key: "db-password"
+                url:
+                  name: artifactory-cluster-db
+                  key: "db-url"
+
             persistence:
               enabled: false
               local: false
@@ -344,7 +371,7 @@ Resources:
                 xms: "${java_xms}"
                 xmx: "${java_xmx}"
               nodeSelector:
-                partition: ${ArtifactoryProduct}
+                partition: JFrog-Artifactory-Pro
             node:
               replicaCount: ${NumberOfSecondary}
               resources:
@@ -358,32 +385,49 @@ Resources:
                 xms: "${java_xms}"
                 xmx: "${java_xmx}"
               nodeSelector:
-                partition: ${ArtifactoryProduct}-secondary
+                partition: JFrog-Artifactory-Pro-secondary
               podAntiAffinity:
                 type: "soft"
                 topologyKey: "kubernetes.io/hostname"
           postgresql:
             enabled: false
-          database:
-            type: ${DatabaseType}
-            driver: ${DatabaseDriver}
-            secrets:
-              user:
-                name: artifactory-cluster-db
-                key: "db-user"
-              password:
-                name: artifactory-cluster-db
-                key: "db-password"
-              url:
-                name: artifactory-cluster-db
-                key: "db-url"
           nginx:
             enabled: true
             replicaCount: 3
             service:
               loadBalancerSourceRanges:  [ "${AccessCidr}" ]
             tlsSecretName: artifactory-nginx-tls
-          installerInfo: '{"productId": "CloudFormation_artifactory-ha/1.0.0","features": [{"featureId": "Partner/ACC-006973"}]}'
+          xray:
+            enabled: false
+            postgresql:
+              enabled: false
+            database:
+              type: ${DatabaseType}
+              driver: ${DatabaseDriver}
+              secrets:
+                user:
+                  name: artifactory-cluster-db
+                  key: "db-user"
+                password:
+                  name: artifactory-cluster-db
+                  key: "db-password"
+                url:
+                  name: artifactory-cluster-db
+                  key: "db-url"
+          rabbitmq:
+            enabled: false
+          postgresql:
+            enabled: false
+          redis:
+            enabled: false
+          distribution:
+            enabled: false
+          mission-control:
+            enabled: false
+          pipelines:
+            enabled: false
+          insight:
+            enabled: false
         - {
            requests_memory: !FindInMap [DeploymentSize, !Ref ArtifactoryDeploymentSize, requestsMem],
            requests_cpu: !FindInMap [DeploymentSize, !Ref ArtifactoryDeploymentSize, requestsCpu],
@@ -392,126 +436,16 @@ Resources:
            java_xms: !FindInMap [DeploymentSize, !Ref ArtifactoryDeploymentSize, javaOptsXms],
            java_xmx: !FindInMap [DeploymentSize, !Ref ArtifactoryDeploymentSize, javaOptsXmx],
           }
-
   IngressHostName:
-    Condition: ArtifactoryHa
     DependsOn: ArtifactoryDeployment
     Type: "Custom::KubeGet"
     Version: '1.0'
     Properties:
       ServiceToken: !Sub "arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:EKS-QuickStart-KubeGet-${KubeClusterName}"
       ClusterName: !Ref KubeClusterName
-      Namespace: !FindInMap [ArtifactoryProductMap, !Ref ArtifactoryProduct, namespace]
-      Name: svc/quickstart-artifactory-ha-nginx
+      Namespace: "jfrog-platform"
+      Name: svc/quickstart-jfrog-platform-artifactory-nginx
       JsonPath: '{.status.loadBalancer.ingress[0].hostname}'
-  # JcrDeployment:
-  #   Condition: JcrInstall
-  #   Type: "AWSQS::Kubernetes::Helm"
-  #   DependsOn: CertificateStore
-  #   Properties:
-  #     ClusterID: !Ref KubeClusterName
-  #     Namespace: !FindInMap [ArtifactoryProductMap, !Ref ArtifactoryProduct, namespace]
-  #     Name: quickstart-jcr
-  #     Chart: jfrog/artifactory-jcr
-  #     Repository: !FindInMap [HelmRepoMap, !FindInMap [ArtifactoryProductMap, !Ref ArtifactoryProduct, !Ref ReleaseStage], RepoUrl]
-  #     Version: !FindInMap [HelmRepoMap, !FindInMap [ArtifactoryProductMap, !Ref ArtifactoryProduct, !Ref ReleaseStage], HelmChartVersion]
-  #     ValueYaml: !Sub
-  #       - |
-  #         artifactory:
-  #           artifactory:
-  #             name: artifactory-jcr
-  #             deleteDBPropertiesOnStartup: true
-  #             masterKey: ${MasterKey}
-  #             preStartCommand: mkdir -p /var/opt/jfrog/artifactory/etc/artifactory/info/; mkdir -p /var/opt/jfrog/artifactory/bootstrap/artifactory/tomcat/lib/; wget -O  /var/opt/jfrog/artifactory/bootstrap/artifactory/tomcat/lib/${DatabasePlugin} ${DatabasePluginUrl}; cp /bootstrap/artifactory/binarystore.xml /var/opt/jfrog/artifactory/etc/artifactory/binarystore.xml
-  #             persistence:
-  #               enabled: false
-  #               type: aws-s3-v3
-  #               binarystoreXml: |
-  #                 <!-- AWS S3 V3 -->
-  #                 <config version="2">
-  #                     <chain>
-  #                         <provider id="cache-fs" type="cache-fs">
-  #                             <provider id="eventual" type="eventual">
-  #                                 <provider id="retry" type="retry">
-  #                                     <provider id="s3-storage-v3" type="s3-storage-v3"/>
-  #                                 </provider>
-  #                             </provider>
-  #                         </provider>
-  #                     </chain>
-  #                     <!-- Set max cache-fs size -->
-  #                     <provider id="cache-fs" type="cache-fs">
-  #                         <maxCacheSize>5e+10</maxCacheSize>
-  #                         <cacheProviderDir>cache</cacheProviderDir>
-  #                     </provider>
-  #                     <provider id="s3-storage-v3" type="s3-storage-v3">
-  #                         <testConnection>false</testConnection>
-  #                         <identity>${ArtifactoryIamAcessKey}</identity>
-  #                         <credential>${SecretAccessKey}</credential>
-  #                         <region>${AWS::Region}</region>
-  #                         <bucketName>${ArtifactoryS3Bucket}</bucketName>
-  #                         <path>artifactory/filestore</path>
-  #                         <endpoint></endpoint>
-  #                         <useInstanceCredentials>false</useInstanceCredentials>
-  #                         <usePresigning>false</usePresigning>
-  #                         <signatureExpirySeconds>300</signatureExpirySeconds>
-  #                     </provider>
-  #                 </config>
-  #             resources:
-  #               requests:
-  #                 memory: "${requests_memory}"
-  #                 cpu: "${requests_cpu}"
-  #               limits:
-  #                 memory: "${limits_memory}"
-  #                 cpu: "${limits_cpu}"
-  #             javaOpts:
-  #               xms: "${java_xms}"
-  #               xmx: "${java_xmx}"
-  #             nodeSelector:
-  #               partition: ${ArtifactoryProduct}
-  #           postgresql:
-  #             enabled: false
-  #           database:
-  #             type: ${DatabaseType}
-  #             driver: ${DatabaseDriver}
-  #             secrets:
-  #               user:
-  #                 name: artifactory-cluster-db
-  #                 key: "db-user"
-  #               password:
-  #                 name: artifactory-cluster-db
-  #                 key: "db-password"
-  #               url:
-  #                 name: artifactory-cluster-db
-  #                 key: "db-url"
-  #           nginx:
-  #             enabled: true
-  #             replicaCount: ${NumberOfSecondary}
-  #             service:
-  #               loadBalancerSourceRanges:  [ "${AccessCidr}" ]
-  #             tlsSecretName: artifactory-nginx-tls
-  #           installerInfo: '{"productId": "CloudFormation_artifactory-jcr/1.0.0","features": [{"featureId": "Partner/ACC-006973"}]}''
-  #         postgresql:
-  #           enabled: false
-  #       - {
-  #          requests_memory: !FindInMap [DeploymentSize, !Ref ArtifactoryDeploymentSize, requestsMem],
-  #          requests_cpu: !FindInMap [DeploymentSize, !Ref ArtifactoryDeploymentSize, requestsCpu],
-  #          limits_memory: !FindInMap [DeploymentSize, !Ref ArtifactoryDeploymentSize, limitsMem],
-  #          limits_cpu: !FindInMap [DeploymentSize, !Ref ArtifactoryDeploymentSize, limitsCpu],
-  #          java_xms: !FindInMap [DeploymentSize, !Ref ArtifactoryDeploymentSize, javaOptsXms],
-  #          java_xmx: !FindInMap [DeploymentSize, !Ref ArtifactoryDeploymentSize, javaOptsXmx],
-  #         }
-  # JcrIngressHostName:
-  #   Condition: JcrInstall
-  #   DependsOn: JcrDeployment
-  #   Type: "Custom::KubeGet"
-  #   Version: '1.0'
-  #   Properties:
-  #     ServiceToken: !Sub "arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:EKS-QuickStart-KubeGet-${KubeClusterName}"
-  #     ClusterName: !Ref KubeClusterName
-  #     Namespace: !FindInMap [ArtifactoryProductMap, !Ref ArtifactoryProduct, namespace]
-  #     Name: svc/quickstart-jcr-artifactory-nginx
-  #     JsonPath: '{.status.loadBalancer.ingress[0].hostname}'
 Outputs:
   ArtifactoryUrl:
-    # Value: !If [ArtifactoryHa, !Sub "https://${IngressHostName}", !Sub "https://${JcrIngressHostName}"]
     Value: !Sub "https://${IngressHostName}"
